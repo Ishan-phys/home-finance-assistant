@@ -1,0 +1,67 @@
+[project]
+name = "ai-cfo"
+version = "0.1.0"
+description = "AI CFO workspace: installs every package for development"
+requires-python = ">=3.13"
+dependencies = [
+    "cfo-core", "cfo-doc", "cfo-redact", "cfo-parse", "cfo-categorize", "cfo-metrics",
+    "cfo-ledger", "cfo-ingest", "cfo-agent", "cfo-api",
+]
+
+[dependency-groups]
+dev = [
+    "cfo-testing[pg]",
+    "pytest>=8",
+    "hypothesis>=6",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "xlwt>=1.3",
+    "reportlab>=5.0.1",
+    "testcontainers[postgres]>=4",
+]
+
+[tool.uv.workspace]
+members = ["packages/*", "api"]
+
+[tool.uv.sources]
+cfo-core = { workspace = true }
+cfo-doc = { workspace = true }
+cfo-redact = { workspace = true }
+cfo-parse = { workspace = true }
+cfo-categorize = { workspace = true }
+cfo-metrics = { workspace = true }
+cfo-ledger = { workspace = true }
+cfo-ingest = { workspace = true }
+cfo-agent = { workspace = true }
+cfo-api = { workspace = true }
+cfo-testing = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["packages", "api", "tools"]
+addopts = "--import-mode=importlib -p cfo.testing.pg"
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "UP046"]  # the formatter owns line length
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = [
+    "packages/cfo-core/src", "packages/cfo-doc/src", "packages/cfo-redact/src",
+    "packages/cfo-parse/src", "packages/cfo-categorize/src", "packages/cfo-metrics/src",
+    "packages/cfo-ledger/src", "packages/cfo-ingest/src", "packages/cfo-agent/src",
+    "packages/cfo-testing/src", "api/src",
+]
+
+[[tool.mypy.overrides]]
+module = ["xlrd", "xlwt", "openpyxl", "openpyxl.*", "msoffcrypto", "msoffcrypto.*"]
+ignore_missing_imports = true

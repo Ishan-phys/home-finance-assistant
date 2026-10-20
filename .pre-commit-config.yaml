@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.10
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: ^(fixtures/|uv.lock|web/package-lock.json)
+      - id: trailing-whitespace
+        exclude: ^(fixtures/|docs/|uv.lock)
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: check-merge-conflict
+      - id: detect-private-key
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: import-boundaries
+        name: package import boundaries
+        entry: uv run python tools/check_imports.py
+        language: system
+        pass_filenames: false
+        files: \.py$
+      - id: block-real-statements
+        name: block statement files outside fixtures/
+        entry: sh -c 'echo "Statements belong in statements/ (gitignored), not in the repository." && exit 1'
+        language: system
+        files: ^(statements/|.*Acct[ _]Statement.*|.*AccountStatement.*|.*Billed ?Statements.*)

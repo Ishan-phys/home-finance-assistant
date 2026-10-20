@@ -1,0 +1,105 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: python (lint, types, tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Types
+        run: uv run mypy packages/*/src api/src tools/check_imports.py
+      - name: Package boundaries
+        run: uv run python tools/check_imports.py
+      - name: Each extractable package passes alone
+        run: bash tools/test_isolated.sh
+      - name: Tests (a throwaway PostgreSQL is started through Docker)
+        run: uv run pytest -q
+
+  web:
+    name: web (lint, types, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  e2e:
+    name: browser tests (full stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [python, web]
+    steps:
+      - uses: actions/checkout@v4
+      - run: cp .env.example .env
+      - run: docker compose up -d --build --wait
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npx playwright install --with-deps chromium
+        working-directory: web
+      - run: ./scripts/check-ports.sh
+      - run: npx playwright test
+        working-directory: web
+      - name: Stack logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: web/test-results
+          retention-days: 7
+
+  secrets:
+    name: secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+      - name: No real statement files
+        run: |
+          set -e
+          bad=$(git ls-files | grep -iE '(^statements/|Acct[ _]Statement|AccountStatement|BilledStatements|\.numbers$|^\.env$)' || true)
+          if [ -n "$bad" ]; then echo "Files that must not be committed:"; echo "$bad"; exit 1; fi

@@ -1,0 +1,82 @@
+{
+  "10% TEST CASHBACK": {
+    "label": "Income:Rewards",
+    "merchant": "Card Cashback"
+  },
+  "ACH D- TEST MUTUAL FUND SIP-REF0001": {
+    "label": "Assets:InTransit",
+    "merchant": "Mutual Fund SIP"
+  },
+  "BPPY CC PAYMENT DP0000 TEST (Ref# ST26000000000000000)": {
+    "label": "Assets:InTransit",
+    "merchant": "Card payment received"
+  },
+  "CC 000000XXXXXX0001 BILLPAY PAYMENT": {
+    "label": "Assets:InTransit",
+    "merchant": "Card bill payment"
+  },
+  "Cashback credit Aug26-POS:100": {
+    "label": "Income:Rewards",
+    "merchant": "Card Cashback"
+  },
+  "DEP TFR   0000000000003 OF TEST USER AT 00000 TEST BR": {
+    "label": "Assets:InTransit",
+    "merchant": "Own Account Deposit"
+  },
+  "INTEREST CREDIT": {
+    "label": "Income:Interest",
+    "merchant": "Bank Interest"
+  },
+  "INTEREST PAID TILL 30-SEP-2026": {
+    "label": "Income:Interest",
+    "merchant": "Bank Interest"
+  },
+  "MB/IB PAYMENT #TEST0000000001": {
+    "label": "Assets:InTransit",
+    "merchant": "Card payment received"
+  },
+  "NEFT CR-TESTCORP LTD-SALARY SEP-TEST USER-TESTN0001": {
+    "label": "Income:Salary",
+    "merchant": "Testcorp Salary"
+  },
+  "NEFT DR-TEST LANDLORD-RENT SEP-TEST USER": {
+    "label": "Expenses:Housing",
+    "merchant": "Landlord Rent"
+  },
+  "TEST ELECTRONICS,CITY": {
+    "label": "Expenses:Shopping",
+    "merchant": "Test Electronics"
+  },
+  "TEST FOOD ORDER CITY": {
+    "label": "Expenses:Food:Dining",
+    "merchant": "Test Food Order"
+  },
+  "TEST FOODS PVT LTD,CITY": {
+    "label": "Expenses:Food:Dining",
+    "merchant": "Test Foods"
+  },
+  "TEST GROCER CITY": {
+    "label": "Expenses:Food:Groceries",
+    "merchant": "Test Grocer"
+  },
+  "UPI-TEST CAFE-TESTCAFE-REF000009-UPI": {
+    "label": "Expenses:Food:Dining",
+    "merchant": "Test Cafe"
+  },
+  "UPI-TEST GROCER-TESTGROCER-REF000012-UPI": {
+    "label": "Expenses:Food:Groceries",
+    "merchant": "Test Grocer"
+  },
+  "UPIRET-TEST CAFE REFUND": {
+    "label": "Expenses:Food:Dining",
+    "merchant": "Test Cafe"
+  },
+  "WDL TFR   UPI/DR/000000000001/TEST SHOP/TEST/test@/UPI   0000000000001 AT 00000 TEST BR": {
+    "label": "Expenses:Shopping",
+    "merchant": "Test Shop"
+  },
+  "WDL TFR   UPI/DR/000000000002/TEST CAB/TEST/test@/UPI   0000000000002 AT 00000 TEST BR": {
+    "label": "Expenses:Transport",
+    "merchant": "Test Cab"
+  }
+}

@@ -1,0 +1,41 @@
+# Host ports bind to 127.0.0.1 only. PostgreSQL publishes no host port.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cfo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cfo-local-dev}
+      POSTGRES_DB: cfo
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cfo"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://cfo:${POSTGRES_PASSWORD:-cfo-local-dev}@db:5432/cfo
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  web:
+    build:
+      context: ./web
+      args:
+        API_URL: http://api:8000
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:3000:3000"
+
+volumes:
+  dbdata:

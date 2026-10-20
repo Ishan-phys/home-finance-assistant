@@ -1,0 +1,31 @@
+{
+  "_comment": "Derived by hand from the synthetic fixtures, not copied from the engine. Sample ledger as of 2026-10-03 with merchant mappings from merchant_mappings.json. Net worth = HDFC 1,92,455.50 + SBI 2,65,181.40 (statement balances) + money in transit 36,109.00 (Groww redeem 49,106 - three buys 4,999 + SIP 10,000 - SBI own deposit 5,000 - Axis payment 3,000, other sides not uploaded) + holdings at market 1,12,000.50 + 85,365.29 - cards owed 10,064.00 + 3,900.00. September: earned = salary 1,50,000 + SBI interest 2,573 (HDFC interest is dated 1 Oct); spent = dining 2,044 (cafe 250x2 less refund 250, food order 647x2, foods 250x2) + groceries 3,101 + rent 30,000 + shopping 1,605 + transport 304; rewards = Axis cashback 100. Safe to spend = own cash and savings less what is owed on cards. Inbox: both card bills are unpaid after their statements, and seven own-account movements wait for their other side.",
+  "month": "2026-09",
+  "as_of": "2026-10-03",
+  "figures": {
+    "net_worth": 67714769,
+    "groups": {
+      "liquid": 49374590,
+      "investments": 19736579,
+      "fixed": 0,
+      "other": 0,
+      "owed": -1396400
+    },
+    "earned": 15257300,
+    "spent": 3705400,
+    "rewards": 10000,
+    "saved": 11561900,
+    "safe_to_spend": 44367290,
+    "inbox": [
+      "card_due",
+      "card_due",
+      "unpaired",
+      "unpaired",
+      "unpaired",
+      "unpaired",
+      "unpaired",
+      "unpaired",
+      "unpaired"
+    ]
+  }
+}

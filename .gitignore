@@ -15,6 +15,7 @@ downloads/
 eggs/
 .eggs/
 lib/
+!web/src/lib/
 lib64/
 parts/
 sdist/
@@ -218,3 +219,32 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Real statements: never commit
+statements/
+.DS_Store
+
+# Local tooling and test output
+.claude/
+web/test-results/
+web/playwright-report/
+*.numbers
+
+# Local development artifacts: PRD/HLD/LLD/TDD, design notes, plans, scratch. Never published.
+.local/
+
+# Database dumps contain financial data
+backup.sql
+*.dump
+
+# repowise owner-digest key (local)
+.repowise/events.key
+
+# Local agent workspaces
+.superpowers/
+
+# Editor, agent and code-intelligence tooling: personal and machine-specific
+.repowise/
+.mcp.json
+.vscode/
+.github/copilot-instructions.md
