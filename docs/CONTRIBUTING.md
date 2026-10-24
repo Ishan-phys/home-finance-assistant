@@ -33,6 +33,16 @@ Read the [user guide](user-guide.md) to run and use the app. The product and des
 (PRD, HLD, LLD, TDD) are kept by the maintainers and not published; for a design question, open an
 issue or discussion first and a maintainer will explain the intent.
 
+## Dependency security
+
+Two checks guard the dependencies. **dependency review** blocks a pull request that adds or
+upgrades a package to a version with a known vulnerability or malware advisory. **audit** checks
+everything already in the lockfiles, every Monday as well as on each pull request, so an advisory
+published against a version we use shows up without a code change.
+
+If a Python advisory does not apply to how the package is used here, add its ID to
+`.github/pip-audit-ignore.txt` with the reason. Never ignore one just to turn a build green.
+
 ## Before you open a pull request
 
 CI runs all of this; run it locally first.

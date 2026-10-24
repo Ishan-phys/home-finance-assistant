@@ -1,0 +1,26 @@
+# Advisories pip-audit may report without failing CI. One ID per line, then the reason.
+# Anything not listed here fails the audit, so a NEW advisory is always reviewed.
+#
+# litellm: every advisory below is about the LiteLLM proxy server (its HTTP endpoints). This app
+# uses litellm only as a library inside the API process and never runs the proxy. litellm cannot
+# be upgraded because every release with the fixes requires openai<3, while the OpenAI
+# categorizer needs openai>=3.26. Revisit when litellm supports openai 3, or when the OpenAI
+# chat path moves off litellm.
+#
+# opentelemetry-api: the fix (1.45.1) is blocked by google-adk, which pins opentelemetry-api<=1.44.
+# The flaw is in parsing an inbound W3C tracestate HTTP header; this app does no inbound tracing.
+PYSEC-2026-2598  # litellm
+PYSEC-2026-2599  # litellm
+PYSEC-2026-2600  # litellm
+PYSEC-2026-2601  # litellm
+PYSEC-2026-2602  # litellm
+PYSEC-2026-3476  # litellm
+PYSEC-2026-3477  # litellm
+PYSEC-2026-3479  # litellm
+PYSEC-2026-3861  # litellm
+PYSEC-2026-388  # litellm
+PYSEC-2026-391  # litellm
+PYSEC-2026-4066  # litellm
+PYSEC-2026-4067  # litellm
+PYSEC-2026-4070  # litellm
+CVE-2026-114603  # opentelemetry-api
