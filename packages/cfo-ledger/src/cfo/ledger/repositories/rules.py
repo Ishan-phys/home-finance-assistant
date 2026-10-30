@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import cast
 
 from cfo.core.errors import InvalidInput, NotFoundError
 from cfo.core.ids import Id, new_id
@@ -14,8 +15,15 @@ from sqlalchemy import func, select, update
 
 def _rule(r: RuleRow) -> Rule:
     return Rule(
-        r.id, r.label, r.match_text, MatchMode(r.mode), r.way, r.target, r.position, r.builtin
-    )  # type: ignore[arg-type]
+        r.id,
+        r.label,
+        r.match_text,
+        MatchMode(r.mode),
+        cast(Way, r.way),  # constrained by ck_rules_way
+        r.target,
+        r.position,
+        r.builtin,
+    )
 
 
 class RuleRepository(ScopedRepository):
