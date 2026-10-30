@@ -210,6 +210,13 @@ def looks_like_person(payee: str) -> bool:
     return any(len(w) == 1 for w in words) or len(words) <= 3
 
 
+def _has_business_signal(payee: str) -> bool:
+    """A business word or a known brand in the payee. "Not clearly a person" is not enough to
+    skip the name lists: a lone first name is neither, and it must still be redacted."""
+    words = [w.casefold() for w in re.findall(r"[A-Za-z]+", _TOKEN.sub(" ", payee))]
+    return any(w in _BUSINESS_WORDS or w in _BRANDS for w in words)
+
+
 _NOT_A_NAME = frozenset(
     """ltd limited pvt private stores store enterprises enterprise traders trading services
     service mart foods food restaurant hotel medical pharmacy electronics fashion mobiles
@@ -292,7 +299,9 @@ class _Run:
             if looks_like_person(payee):
                 token = self.hit(PERSON, payee)
                 return text[: m.start("payee")] + token + text[m.end("payee") :], None
-            return text[: m.start("payee")] + _HELD + text[m.end("payee") :], payee
+            if _has_business_signal(payee):
+                return text[: m.start("payee")] + _HELD + text[m.end("payee") :], payee
+            return text, None  # unclear (often one first name): the name lists still apply
         return text, None
 
     def scrub(self, text: str) -> str:

@@ -420,3 +420,9 @@ def test_card_statement_transactions_skip_the_name_lists_but_the_header_does_not
     assert "Rohit" not in out and "Mehra" not in out
     plain = Redactor(RedactorConfig(salt=SALT)).redact(doc).document.full_text
     assert "SAGAR RATNA" not in plain  # without the flag, behaviour is unchanged
+
+
+@pytest.mark.parametrize("first_name", ["SNEHA", "JYOTI", "VIDYA", "RANJANA"])
+def test_a_lone_first_name_payee_is_still_redacted(first_name: str) -> None:
+    out = _scrub(f"UPI-{first_name}-x@ybl-CNRB0000001-123456789012-UPI")
+    assert first_name not in out and re.search(r"\[PERSON:[0-9a-f]{4}\]", out)
