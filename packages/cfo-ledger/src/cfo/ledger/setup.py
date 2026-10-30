@@ -30,6 +30,7 @@ from cfo.core.types import (
     Transaction,
 )
 from cfo.ledger.repositories.accounts import AccountRepository, SettingsRepository
+from cfo.ledger.repositories.originals import OriginalRepository
 from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
 from sqlalchemy.orm import Session
@@ -191,6 +192,7 @@ def delete_account(s: Session, account_id: Id) -> None:
     _real(s, account_id)
     remove_account_postings(s, account_id)
     AccountRepository(s).delete(account_id)
+    OriginalRepository(s).purge_orphans()
 
 
 # categories ---------------------------------------------------------------------------

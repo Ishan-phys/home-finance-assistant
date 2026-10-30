@@ -11,6 +11,7 @@ from cfo.api.catalog import build_catalog, resolve_binding
 from cfo.api.chat import ChatRegistry, add_chat_routes
 from cfo.api.deps import ScopeDep
 from cfo.api.labels import apply_labels
+from cfo.api.originals import attach_originals
 from cfo.api.rules_routes import add_rule_routes
 from cfo.api.sample import default_seed_client, load_sample
 from cfo.core.errors import ConflictError, NotFoundError
@@ -290,6 +291,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
             today(),
             password or None,
             scope,
+            deps.vault,
         )
         return {
             "import_id": str(result.import_id),
@@ -316,7 +318,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
     def retry(scope: ScopeDep) -> Json:
         if deps.client is None:
             raise ConflictError("no model is configured")
-        result = retry_categorization(db, deps.client, scope)
+        result = retry_categorization(db, deps.client, scope, deps.vault)
         return {"rows_updated": result.rows_updated, "warnings": list(result.warnings)}
 
     # categories -----------------------------------------------------------------------
@@ -379,6 +381,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
                 q=q,
                 limit=limit,
             )
+            attach_originals(s, deps.vault, rows, "id")
         return labelled(scope, rows)  # type: ignore[no-any-return]
 
     @r.patch("/transactions/{tx_id}/category")
@@ -425,6 +428,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
     def inbox(scope: ScopeDep) -> list[Json]:
         with db.transaction(scope) as s:
             out = reports.inbox_report(data(s))
+            attach_originals(s, deps.vault, out, "transaction_id")
         return labelled(scope, out)  # type: ignore[no-any-return]
 
     # settings -------------------------------------------------------------------------

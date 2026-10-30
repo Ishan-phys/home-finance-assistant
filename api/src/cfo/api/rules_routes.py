@@ -7,11 +7,13 @@ from uuid import UUID
 
 from cfo.api.app import Deps
 from cfo.api.deps import ScopeDep
+from cfo.api.originals import read_originals
 from cfo.core.chart import IN_TRANSIT
 from cfo.core.errors import InvalidInput, NotFoundError
 from cfo.core.types import AccountRole
 from cfo.ledger.repositories.accounts import AccountRepository
 from cfo.ledger.repositories.rules import RuleRepository
+from cfo.ledger.repositories.transactions import JournalRepository
 from cfo.ledger.rules_service import apply_rule, preview_rule
 from cfo.rules import MatchMode, Rule, Way
 from fastapi import APIRouter, Response
@@ -89,6 +91,10 @@ def _json(s: Session, rule: Rule) -> Json:
 def add_rule_routes(r: APIRouter, deps: Deps) -> None:
     db = deps.db
 
+    def originals(s: Session) -> dict[Any, str]:
+        ids = [t.id for t in JournalRepository(s).list_all()]
+        return read_originals(s, deps.vault, ids)
+
     @r.get("/rules")
     def list_rules(scope: ScopeDep) -> list[Json]:
         with db.transaction(scope) as s:
@@ -100,7 +106,7 @@ def add_rule_routes(r: APIRouter, deps: Deps) -> None:
             rule = RuleRepository(s).add(
                 body.label, body.match_text, body.mode, body.way, _target_path(s, body.target_id)
             )
-            applied = apply_rule(s, rule) if body.apply_now else 0
+            applied = apply_rule(s, rule, originals(s)) if body.apply_now else 0
             return {**_json(s, rule), "applied": applied}
 
     @r.patch("/rules/{rule_id}")
@@ -138,7 +144,7 @@ def add_rule_routes(r: APIRouter, deps: Deps) -> None:
                 UUID(int=0), body.label or body.match_text, body.match_text, body.mode, body.way,
                 _target_path(s, body.target_id), 0,
             )  # fmt: skip
-            return {"matches": preview_rule(s, draft)}
+            return {"matches": preview_rule(s, draft, originals(s))}
 
     @r.post("/rules/{rule_id}/apply")
     def apply(scope: ScopeDep, rule_id: UUID) -> Json:
@@ -146,4 +152,4 @@ def add_rule_routes(r: APIRouter, deps: Deps) -> None:
             rule = RuleRepository(s).get(rule_id)
             if rule is None:
                 raise NotFoundError(f"unknown rule {rule_id}")
-            return {"changed": apply_rule(s, rule)}
+            return {"changed": apply_rule(s, rule, originals(s))}

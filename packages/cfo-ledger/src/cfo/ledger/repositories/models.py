@@ -346,6 +346,18 @@ class MerchantMappingRow(Base):
     )
 
 
+class PostingOriginalRow(Base):
+    """The original, unredacted narration of a statement row, sealed by cfo-vault. Keyed like the
+    observed posting it belongs to, so it follows the row when two halves of a transfer merge."""
+
+    __tablename__ = "posting_originals"
+    ledger_id: Mapped[uuid.UUID] = mapped_column(Uuid, ForeignKey("ledgers.id"), primary_key=True)
+    account_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    dedup_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    ciphertext: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = _now()
+
+
 class RuleRow(Base):
     """An owner rule: narration text, a match mode and direction, and the account it posts to."""
 

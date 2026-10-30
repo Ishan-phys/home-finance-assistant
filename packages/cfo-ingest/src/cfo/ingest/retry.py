@@ -13,8 +13,25 @@ from cfo.ingest.masking import build_masker
 from cfo.ingest.upload import ledger_labels
 from cfo.ledger.journal import apply_to_uncategorized, uncategorized_rows
 from cfo.ledger.repositories.db import Database
-from cfo.ledger.repositories.transactions import MappingRepository
+from cfo.ledger.repositories.originals import OriginalRepository
+from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
 from cfo.ledger.rules_service import active_rules, rule_mappings
+from cfo.vault import Vault
+from sqlalchemy.orm import Session
+
+
+def _original_texts(s: Session, vault: Vault | None) -> dict[str, str]:
+    """Stored narration to original narration, for rules to read. Local only."""
+    if vault is None:
+        return {}
+    all_txs = JournalRepository(s).list_all()
+    sealed = OriginalRepository(s).for_transactions(t.id for t in all_txs)
+    out: dict[str, str] = {}
+    for t in all_txs:
+        text = vault.open(sealed[t.id]) if t.id in sealed else None
+        if text is not None:
+            out[t.narration] = text
+    return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +41,10 @@ class RetryResult:
 
 
 def retry_categorization(
-    db: Database, client: Categorizer | ModelClient, scope: Scope | None = None
+    db: Database,
+    client: Categorizer | ModelClient,
+    scope: Scope | None = None,
+    vault: Vault | None = None,
 ) -> RetryResult:
     """Categorize Uncategorized rows again without reimporting. Owner mappings are kept."""
     with db.upload_lock():
@@ -34,7 +54,8 @@ def retry_categorization(
                 narration: ("debit" if amount < 0 else "credit") for narration, amount in rows
             }
             known = MappingRepository(s).get_many(directions)
-            known = {**known, **rule_mappings(active_rules(s), directions, known)}
+            texts = _original_texts(s, vault)
+            known = {**known, **rule_mappings(active_rules(s), directions, known, texts)}
             masker = build_masker(s)
             labels = ledger_labels(s)
             examples = owner_examples(s)

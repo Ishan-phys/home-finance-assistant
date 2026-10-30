@@ -15,6 +15,7 @@ from cfo.categorize.decisions import DecisionsCategorizer, make_decisions_client
 from cfo.categorize.port import Categorizer
 from cfo.core.dates import today_ist
 from cfo.ledger.repositories.db import Database
+from cfo.vault import Vault, load_vault
 from fastapi import FastAPI
 from google.adk.models.anthropic_llm import AnthropicLlm
 from google.adk.models.base_llm import BaseLlm
@@ -27,6 +28,7 @@ class Deps:
     client: Categorizer | ModelClient | None
     clock: Callable[[], date]
     settings: Settings
+    vault: Vault | None = None  # seals original narrations; None keeps none
 
 
 class ProviderConfigError(RuntimeError):
@@ -81,6 +83,7 @@ def create_app(
     clock: Callable[[], date] = today_ist,
     settings: Settings | None = None,
     chat_model: BaseLlm | str | None = None,
+    vault: Vault | None = None,
 ) -> FastAPI:
     """Build the app. The defaults read the environment; tests pass their own pieces."""
     from cfo.api.routes import build_router  # noqa: PLC0415
@@ -91,6 +94,7 @@ def create_app(
         client=client or build_categorizer(cfg),
         clock=clock,
         settings=cfg,
+        vault=vault or load_vault(os.environ),
     )
     app = FastAPI(title="AI CFO", version="0.1.0")
     errors.install(app)

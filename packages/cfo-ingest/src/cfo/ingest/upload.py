@@ -13,6 +13,7 @@ if redaction raises, the upload is rejected and no unredacted text is used.
 from __future__ import annotations
 
 import hashlib
+import logging
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Literal
@@ -30,6 +31,7 @@ from cfo.core.types import (
     MerchantMapping,
     Scope,
 )
+from cfo.doc import Document
 from cfo.ingest.dedup import HashedRow, hash_rows
 from cfo.ingest.examples import owner_examples
 from cfo.ingest.masking import build_masker
@@ -50,17 +52,20 @@ from cfo.ledger.repositories.accounts import (
     SettingsRepository,
 )
 from cfo.ledger.repositories.db import Database
+from cfo.ledger.repositories.originals import OriginalRepository
 from cfo.ledger.repositories.scope import ScopeMissingError
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
 from cfo.ledger.rules_service import active_rules, rule_mappings
 from cfo.ledger.setup import is_set_up
 from cfo.parse.base import ParsedStatement, ParseFailed
 from cfo.parse.readers import read_document
-from cfo.parse.registry import ADAPTERS
+from cfo.parse.registry import ADAPTERS, Adapter
 from cfo.parse.unlock import unlock
 from cfo.redact import RedactionError, RedactionReport, Redactor, RedactorConfig
+from cfo.vault import Vault
 from sqlalchemy.orm import Session
 
+log = logging.getLogger("cfo.ingest")
 _HOLDINGS_TYPE = {"mutual_funds": AccountType.MUTUAL_FUND, "stocks": AccountType.STOCK}
 
 
@@ -111,13 +116,16 @@ def upload_statement(
     today: date,
     password: str | None = None,
     scope: Scope | None = None,
+    vault: Vault | None = None,
 ) -> UploadResult:
     """Import one statement file onto an account.
 
     Raises SetupRequired before the ledger has an account, NotFoundError for an unknown
     account, and ParseFailed (PasswordRequired or PasswordInvalid for a protected file), or
     ValidationFailed for a file the adapter rejects; a rejected file writes nothing. `scope` is
-    the person's ledger and bounds everything the upload reads and writes.
+    the person's ledger and bounds everything the upload reads and writes. With a `vault`, each
+    row's original narration is kept sealed beside the redacted one, for the owner to read and for
+    rules to match; it is never sent anywhere.
     """
     with db.upload_lock():
         scope = scope or db.default_scope
@@ -154,6 +162,7 @@ def upload_statement(
         parsed = adapter.parse(redacted.document)
         hashed = hash_rows(parsed.rows, account_id)
         warnings = list(parsed.warnings)
+        originals = _original_narrations(adapter, document, parsed, hashed, vault, warnings)
         fingerprint = redacted.report.fingerprint
         if (
             fingerprint
@@ -188,6 +197,11 @@ def upload_statement(
                     if not h.row.own_move
                 },
                 known,
+                {
+                    h.row.raw_description: originals[h.dedup_hash]
+                    for h in fresh
+                    if h.dedup_hash in originals
+                },
             ),
         }
 
@@ -222,7 +236,38 @@ def upload_statement(
                 new_model,
                 warnings,
                 redacted.report,
+                {h: vault.seal(t) for h, t in originals.items()} if vault else {},
             )
+
+
+def _original_narrations(
+    adapter: Adapter,
+    document: Document,
+    parsed: ParsedStatement,
+    hashed: list[HashedRow],
+    vault: Vault | None,
+    warnings: list[str],
+) -> dict[str, str]:
+    """The original narration of each row by dedup hash, or nothing. The adapter reads the
+    unredacted document too; its rows must line up with the redacted ones in count, date and
+    amount, or none are kept (fail closed: a misaligned original would label the wrong row).
+    Never raises, and never puts a narration in a message."""
+    if vault is None or parsed.holdings_kind is not None:
+        return {}
+    try:
+        original = adapter.parse(document)
+    except Exception as exc:  # the redacted copy parsed; this one is only a convenience
+        log.warning("original narrations not kept: %s", type(exc).__name__)
+        warnings.append("original narrations could not be kept for this statement")
+        return {}
+    same = len(original.rows) == len(parsed.rows) == len(hashed) and all(
+        o.date == r.date and o.amount == r.amount
+        for o, r in zip(original.rows, parsed.rows, strict=True)
+    )
+    if not same:
+        warnings.append("original narrations could not be kept for this statement")
+        return {}
+    return {h.dedup_hash: o.raw_description for h, o in zip(hashed, original.rows, strict=True)}
 
 
 def _row(h: HashedRow) -> RowIn:
@@ -247,6 +292,7 @@ def _commit(
     new_model: list[MerchantMapping],
     warnings: list[str],
     report: RedactionReport,
+    sealed: dict[str, bytes],
 ) -> UploadResult:
     if new_model:
         MappingRepository(s).save_model(new_model)
@@ -274,6 +320,9 @@ def _commit(
     if report.fingerprint:
         AccountRepository(s).set_fingerprint(account.id, report.fingerprint)
     posted = post_rows(s, account, record.id, [_row(h) for h in hashed], mappings)
+    originals_repo = OriginalRepository(s)
+    originals_repo.put_many(account.id, sealed)
+    originals_repo.purge_orphans()
     ImportHashRepository(s).add(record.id, account.id, [h.dedup_hash for h in hashed])
     ImportRepository(s).set_counts(record.id, posted.inserted, posted.ignored)
     pairs = pair_in_transit(s)

@@ -38,15 +38,17 @@ def rule_mappings(
     rules: Sequence[Rule],
     wanted: Mapping[str, Way],
     known: Mapping[str, MerchantMapping],
+    texts: Mapping[str, str] | None = None,
 ) -> dict[str, MerchantMapping]:
     """Mappings for the narrations in `wanted` that a rule matches, except those the owner has
-    already mapped. Not stored: a rule is looked up again each time, so editing it takes effect."""
+    already mapped. `texts` maps a stored narration to its original text, which a rule reads when
+    there is one. Not stored: a rule is looked up again each time, so editing it takes effect."""
     out: dict[str, MerchantMapping] = {}
     for narration, way in wanted.items():
         mapped = known.get(narration)
         if mapped is not None and mapped.source is MappingSource.OWNER:
             continue
-        rule = first_match(rules, narration, way)
+        rule = first_match(rules, (texts or {}).get(narration, narration), way)
         if rule is not None:
             out[narration] = MerchantMapping(
                 narration, rule.label, rule.target, MappingSource.OWNER

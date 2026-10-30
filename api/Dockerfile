@@ -9,7 +9,7 @@ COPY api ./api
 COPY fixtures ./fixtures
 RUN uv sync --frozen --no-dev --package cfo-api
 ENV PATH="/app/.venv/bin:$PATH"
-RUN useradd --system --no-create-home cfo
+RUN useradd --system --no-create-home cfo && mkdir /keys && chown cfo /keys
 USER cfo
 EXPOSE 8000
 WORKDIR /app/packages/cfo-ledger

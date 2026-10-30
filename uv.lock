@@ -22,6 +22,7 @@ members = [
     "cfo-redact",
     "cfo-rules",
     "cfo-testing",
+    "cfo-vault",
 ]
 
 [[package]]
@@ -40,6 +41,7 @@ dependencies = [
     { name = "cfo-parse" },
     { name = "cfo-redact" },
     { name = "cfo-rules" },
+    { name = "cfo-vault" },
 ]
 
 [package.dev-dependencies]
@@ -68,6 +70,7 @@ requires-dist = [
     { name = "cfo-parse", editable = "packages/cfo-parse" },
     { name = "cfo-redact", editable = "packages/cfo-redact" },
     { name = "cfo-rules", editable = "packages/cfo-rules" },
+    { name = "cfo-vault", editable = "packages/cfo-vault" },
 ]
 
 [package.metadata.requires-dev]
@@ -507,6 +510,7 @@ dependencies = [
     { name = "cfo-parse" },
     { name = "cfo-redact" },
     { name = "cfo-rules" },
+    { name = "cfo-vault" },
     { name = "fastapi" },
     { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
@@ -523,6 +527,7 @@ requires-dist = [
     { name = "cfo-parse", editable = "packages/cfo-parse" },
     { name = "cfo-redact", editable = "packages/cfo-redact" },
     { name = "cfo-rules", editable = "packages/cfo-rules" },
+    { name = "cfo-vault", editable = "packages/cfo-vault" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
@@ -565,6 +570,7 @@ dependencies = [
     { name = "cfo-ledger" },
     { name = "cfo-parse" },
     { name = "cfo-redact" },
+    { name = "cfo-vault" },
 ]
 
 [package.metadata]
@@ -574,6 +580,7 @@ requires-dist = [
     { name = "cfo-ledger", editable = "packages/cfo-ledger" },
     { name = "cfo-parse", editable = "packages/cfo-parse" },
     { name = "cfo-redact", editable = "packages/cfo-redact" },
+    { name = "cfo-vault", editable = "packages/cfo-vault" },
 ]
 
 [[package]]
@@ -585,6 +592,7 @@ dependencies = [
     { name = "cfo-core" },
     { name = "cfo-metrics" },
     { name = "cfo-rules" },
+    { name = "cfo-vault" },
     { name = "psycopg", extra = ["binary"] },
     { name = "sqlalchemy" },
 ]
@@ -595,6 +603,7 @@ requires-dist = [
     { name = "cfo-core", editable = "packages/cfo-core" },
     { name = "cfo-metrics", editable = "packages/cfo-metrics" },
     { name = "cfo-rules", editable = "packages/cfo-rules" },
+    { name = "cfo-vault", editable = "packages/cfo-vault" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "sqlalchemy", specifier = ">=2.0" },
 ]
@@ -688,6 +697,17 @@ requires-dist = [
     { name = "testcontainers", extras = ["postgres"], marker = "extra == 'pg'", specifier = ">=4" },
 ]
 provides-extras = ["pg"]
+
+[[package]]
+name = "cfo-vault"
+version = "0.1.0"
+source = { editable = "packages/cfo-vault" }
+dependencies = [
+    { name = "cryptography" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "cryptography", specifier = ">=43" }]
 
 [[package]]
 name = "charset-normalizer"

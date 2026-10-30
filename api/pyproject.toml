@@ -7,6 +7,7 @@ dependencies = [
     "cfo-core",
     "cfo-metrics",
     "cfo-rules",
+    "cfo-vault",
     "cfo-ledger",
     "cfo-ingest",
     "cfo-parse",
@@ -29,6 +30,7 @@ packages = ["src/cfo"]
 cfo-core = { workspace = true }
 cfo-metrics = { workspace = true }
 cfo-rules = { workspace = true }
+cfo-vault = { workspace = true }
 cfo-ledger = { workspace = true }
 cfo-ingest = { workspace = true }
 cfo-parse = { workspace = true }

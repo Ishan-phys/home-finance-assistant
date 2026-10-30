@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "AI CFO workspace: installs every package for development"
 requires-python = ">=3.13"
 dependencies = [
-    "cfo-core", "cfo-doc", "cfo-redact", "cfo-parse", "cfo-categorize", "cfo-metrics", "cfo-rules",
+    "cfo-core", "cfo-doc", "cfo-redact", "cfo-parse", "cfo-categorize", "cfo-metrics", "cfo-rules", "cfo-vault",
     "cfo-ledger", "cfo-ingest", "cfo-agent", "cfo-api",
 ]
 
@@ -32,6 +32,7 @@ cfo-parse = { workspace = true }
 cfo-categorize = { workspace = true }
 cfo-metrics = { workspace = true }
 cfo-rules = { workspace = true }
+cfo-vault = { workspace = true }
 cfo-ledger = { workspace = true }
 cfo-ingest = { workspace = true }
 cfo-agent = { workspace = true }
@@ -58,7 +59,7 @@ namespace_packages = true
 explicit_package_bases = true
 mypy_path = [
     "packages/cfo-core/src", "packages/cfo-doc/src", "packages/cfo-redact/src",
-    "packages/cfo-parse/src", "packages/cfo-categorize/src", "packages/cfo-metrics/src", "packages/cfo-rules/src",
+    "packages/cfo-parse/src", "packages/cfo-categorize/src", "packages/cfo-metrics/src", "packages/cfo-rules/src", "packages/cfo-vault/src",
     "packages/cfo-ledger/src", "packages/cfo-ingest/src", "packages/cfo-agent/src",
     "packages/cfo-testing/src", "api/src",
 ]

@@ -370,3 +370,111 @@ def test_a_hand_decision_reaches_the_model_as_an_example_on_retry(database: Data
     (example,) = model.examples
     assert example.description == cafe.narration
     assert example.label.startswith("category_")  # the model sees a key, never the real path
+
+
+# sealed original narrations -------------------------------------------------------------
+
+
+def _sealed(db: Database):  # type: ignore[no-untyped-def]
+    """(original, stored) narration pairs the vault can open, by transaction."""
+    from cfo.ledger.repositories.originals import OriginalRepository
+
+    with db.transaction() as s:
+        all_txs = [t for t in JournalRepository(s).list_all() if t.narration != "Opening balance"]
+        blobs = OriginalRepository(s).for_transactions(t.id for t in all_txs)
+    return all_txs, blobs
+
+
+def test_originals_are_kept_sealed_and_readable_with_the_key(database: Database) -> None:
+    from cfo.vault import FernetVault, generate_key
+
+    accts = accounts(database)
+    vault = FernetVault(generate_key())
+    upload_statement(
+        database, accts["bank"].id, "hdfc_bank_sep.csv", fixture("hdfc_bank_sep.csv"),
+        FakeModel(), TODAY, vault=vault,
+    )  # fmt: skip
+    all_txs, blobs = _sealed(database)
+    assert blobs and len(blobs) == len(all_txs)
+    cafe = next(t for t in all_txs if "TEST CAFE" in t.narration and "REFUND" not in t.narration)
+    assert vault.open(blobs[cafe.id]) == "UPI-TEST CAFE-TESTCAFE-REF000009-UPI"
+    assert cafe.narration != "UPI-TEST CAFE-TESTCAFE-REF000009-UPI"  # the stored text is redacted
+    assert b"TESTCAFE" not in blobs[cafe.id]
+
+
+def test_a_rule_can_match_text_that_redaction_removed(database: Database) -> None:
+    from cfo.ledger.repositories.rules import RuleRepository
+    from cfo.rules import MatchMode
+    from cfo.vault import FernetVault, generate_key
+
+    accts = accounts(database)
+    with database.transaction() as s:
+        RuleRepository(s).add("Ref", "REF000009", MatchMode.CONTAINS, "debit", "Expenses:Health")
+    upload_statement(
+        database, accts["bank"].id, "hdfc_bank_sep.csv", fixture("hdfc_bank_sep.csv"),
+        FakeModel(), TODAY, vault=FernetVault(generate_key()),
+    )  # fmt: skip
+    hits = [
+        t
+        for t in txs(database)
+        if t.narration != "Opening balance" and counter_path(database, t) == "Expenses:Health"
+    ]
+    assert hits and all("REF" in t.narration for t in hits)
+
+
+def test_reupload_attaches_originals_without_duplicating_rows(database: Database) -> None:
+    from cfo.vault import FernetVault, generate_key
+
+    accts = accounts(database)
+    upload(database, accts["bank"], "hdfc_bank_sep.csv")  # first, with no vault
+    before = len(_sealed(database)[0])
+    assert _sealed(database)[1] == {}
+    upload_statement(
+        database, accts["bank"].id, "hdfc_bank_sep.csv", fixture("hdfc_bank_sep.csv"),
+        FakeModel(), TODAY, vault=FernetVault(generate_key()),
+    )  # fmt: skip
+    all_txs, blobs = _sealed(database)
+    assert len(all_txs) == before and len(blobs) == before
+
+
+def test_removing_a_statement_removes_its_originals(database: Database) -> None:
+    from cfo.ledger.journal import remove_import
+    from cfo.ledger.repositories.originals import OriginalRepository
+    from cfo.vault import FernetVault, generate_key
+
+    accts = accounts(database)
+    result = upload_statement(
+        database, accts["bank"].id, "hdfc_bank_sep.csv", fixture("hdfc_bank_sep.csv"),
+        FakeModel(), TODAY, vault=FernetVault(generate_key()),
+    )  # fmt: skip
+    with database.transaction() as s:
+        remove_import(s, result.import_id)
+        assert OriginalRepository(s).purge_orphans() == 0  # already gone
+    assert txs(database) == [] and _sealed(database)[1] == {}
+
+
+def test_misaligned_original_parse_keeps_none(database: Database, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    from dataclasses import replace
+
+    from cfo.parse.registry import ADAPTERS
+    from cfo.vault import FernetVault, generate_key
+
+    real = ADAPTERS["hdfc_bank"]
+    calls = {"n": 0}
+
+    class Skewed:
+        binding, accepts = real.binding, real.accepts
+
+        def parse(self, doc):  # type: ignore[no-untyped-def]
+            parsed = real.parse(doc)
+            calls["n"] += 1
+            return replace(parsed, rows=parsed.rows[:-1]) if calls["n"] == 2 else parsed
+
+    monkeypatch.setitem(ADAPTERS, "hdfc_bank", Skewed())
+    accts = accounts(database)
+    result = upload_statement(
+        database, accts["bank"].id, "hdfc_bank_sep.csv", fixture("hdfc_bank_sep.csv"),
+        FakeModel(), TODAY, vault=FernetVault(generate_key()),
+    )  # fmt: skip
+    assert result.rows_inserted > 0 and _sealed(database)[1] == {}
+    assert any("original narrations could not be kept" in w for w in result.warnings)
