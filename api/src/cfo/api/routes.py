@@ -11,6 +11,7 @@ from cfo.api.catalog import build_catalog, resolve_binding
 from cfo.api.chat import ChatRegistry, add_chat_routes
 from cfo.api.deps import ScopeDep
 from cfo.api.labels import apply_labels
+from cfo.api.rules_routes import add_rule_routes
 from cfo.api.sample import default_seed_client, load_sample
 from cfo.core.errors import ConflictError, NotFoundError
 from cfo.core.types import AccountRole, AccountType, Direction
@@ -480,6 +481,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
         return {"token": body.token, "label": body.label.strip() or None}
 
     add_chat_routes(r, chats)
+    add_rule_routes(r, deps)
     top.include_router(r)
     return top
 
