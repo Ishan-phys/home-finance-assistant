@@ -12,7 +12,9 @@ from cfo.ingest.masking import build_masker
 from cfo.ingest.upload import ledger_labels
 from cfo.ledger.journal import apply_to_uncategorized, uncategorized_rows
 from cfo.ledger.repositories.db import Database
+from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.transactions import MappingRepository
+from cfo.ledger.rules_service import rule_mappings
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +34,7 @@ def retry_categorization(
                 narration: ("debit" if amount < 0 else "credit") for narration, amount in rows
             }
             known = MappingRepository(s).get_many(directions)
+            known = {**known, **rule_mappings(RuleRepository(s).list_all(), directions, known)}
             masker = build_masker(s)
             labels = ledger_labels(s)
         todo = [d for d in directions if d not in known]

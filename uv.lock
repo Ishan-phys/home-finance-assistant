@@ -506,6 +506,7 @@ dependencies = [
     { name = "cfo-metrics" },
     { name = "cfo-parse" },
     { name = "cfo-redact" },
+    { name = "cfo-rules" },
     { name = "fastapi" },
     { name = "python-multipart" },
     { name = "uvicorn", extra = ["standard"] },
@@ -521,6 +522,7 @@ requires-dist = [
     { name = "cfo-metrics", editable = "packages/cfo-metrics" },
     { name = "cfo-parse", editable = "packages/cfo-parse" },
     { name = "cfo-redact", editable = "packages/cfo-redact" },
+    { name = "cfo-rules", editable = "packages/cfo-rules" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
@@ -582,6 +584,7 @@ dependencies = [
     { name = "alembic" },
     { name = "cfo-core" },
     { name = "cfo-metrics" },
+    { name = "cfo-rules" },
     { name = "psycopg", extra = ["binary"] },
     { name = "sqlalchemy" },
 ]
@@ -591,6 +594,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
     { name = "cfo-core", editable = "packages/cfo-core" },
     { name = "cfo-metrics", editable = "packages/cfo-metrics" },
+    { name = "cfo-rules", editable = "packages/cfo-rules" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "sqlalchemy", specifier = ">=2.0" },
 ]

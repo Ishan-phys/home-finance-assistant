@@ -30,6 +30,7 @@ from cfo.core.types import (
     Transaction,
 )
 from cfo.ledger.repositories.accounts import AccountRepository, SettingsRepository
+from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
 from sqlalchemy.orm import Session
 
@@ -263,6 +264,7 @@ def retire_category(s: Session, account_id: Id, today: date) -> None:
     # What was remembered for it would keep these rows uncategorized for good, because a known
     # description is never sent to the categorizer again.
     MappingRepository(s).forget(account.path)
+    RuleRepository(s).delete_targeting(account.path)
     AccountRepository(s).retire(account_id, today)
 
 
@@ -280,6 +282,7 @@ def merge_category(s: Session, from_id: Id, into_id: Id, today: date) -> int:
         raise ConflictError("merge or retire the categories under it first")
     moved = JournalRepository(s).move_postings(source.id, target.id)
     MappingRepository(s).repoint(source.path, target.path)
+    RuleRepository(s).repoint(source.path, target.path)
     AccountRepository(s).retire(source.id, today)
     return moved
 

@@ -314,3 +314,31 @@ def test_the_same_file_twice_survives_removing_the_first(database: Database) -> 
         remove_import(s, first.import_id)
     assert len([t for t in txs(database) if t.source == "import"]) == 2
     assert no_gaps(database)
+
+
+def test_owner_rule_categorizes_before_the_model_and_beats_it(database: Database) -> None:
+    from cfo.ledger.repositories.rules import RuleRepository
+    from cfo.rules import MatchMode
+
+    accts = accounts(database)
+    with database.transaction() as s:
+        RuleRepository(s).add(
+            "Cafe is fitness", "cafe", MatchMode.CONTAINS, "debit", "Expenses:Health"
+        )
+    model = FakeModel()
+    upload(database, accts["bank"], "hdfc_bank_sep.csv", model)
+    cafes = [
+        t
+        for t in txs(database)
+        if "CAFE" in t.narration.upper()
+        and next(p for p in t.postings if p.origin is Origin.OBSERVED).amount < 0
+    ]
+    assert cafes and all(counter_path(database, t) == "Expenses:Health" for t in cafes)
+    asked = "\n".join(model.requests).upper()
+    assert all(
+        t.narration.upper() not in asked for t in cafes
+    )  # a rule row never reached the model
+    with database.transaction() as s:
+        from cfo.ledger.verify import verify_books
+
+        assert verify_books(s) == []

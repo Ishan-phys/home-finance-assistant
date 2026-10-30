@@ -49,8 +49,10 @@ from cfo.ledger.repositories.accounts import (
     SettingsRepository,
 )
 from cfo.ledger.repositories.db import Database
+from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.scope import ScopeMissingError
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
+from cfo.ledger.rules_service import rule_mappings
 from cfo.ledger.setup import is_set_up
 from cfo.parse.base import ParsedStatement, ParseFailed
 from cfo.parse.readers import read_document
@@ -170,7 +172,22 @@ def upload_statement(
             )
             fresh = [h for h in hashed if h.dedup_hash not in stored]
             known = MappingRepository(s).get_many(h.row.raw_description for h in fresh)
+            rules = RuleRepository(s).list_all()
             masker = build_masker(s)
+
+        # Owner rules come before the model and win over a mapping only the model made.
+        known = {
+            **known,
+            **rule_mappings(
+                rules,
+                {
+                    h.row.raw_description: ("debit" if h.row.amount < 0 else "credit")
+                    for h in fresh
+                    if not h.row.own_move
+                },
+                known,
+            ),
+        }
 
         unmapped: dict[str, Literal["debit", "credit"]] = {
             h.row.raw_description: ("debit" if h.row.amount < 0 else "credit")

@@ -24,6 +24,7 @@ from cfo.core.types import (
 )
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -342,6 +343,28 @@ class MerchantMappingRow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class RuleRow(Base):
+    """An owner rule: narration text, a match mode and direction, and the account it posts to."""
+
+    __tablename__ = "rules"
+    __table_args__ = (
+        CheckConstraint("mode IN ('contains', 'starts_with')", name="ck_rules_mode"),
+        CheckConstraint("way IN ('any', 'debit', 'credit')", name="ck_rules_way"),
+        CheckConstraint("length(trim(match_text)) > 0", name="ck_rules_text_nonblank"),
+        Index("ix_rules_ledger_position", "ledger_id", "position"),
+    )
+    id: Mapped[uuid.UUID] = pk()
+    ledger_id: Mapped[uuid.UUID] = ledger_fk()
+    label: Mapped[str] = mapped_column(Text)
+    match_text: Mapped[str] = mapped_column(Text)
+    mode: Mapped[str] = mapped_column(String(12))
+    way: Mapped[str] = mapped_column(String(6), server_default="any")
+    target: Mapped[str] = mapped_column(Text)  # the account path
+    position: Mapped[int] = mapped_column(Integer)
+    builtin: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    created_at: Mapped[datetime] = _now()
 
 
 class RedactionTermRow(Base):
