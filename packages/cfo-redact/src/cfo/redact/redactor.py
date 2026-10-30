@@ -44,6 +44,9 @@ class RedactionError(Exception):
 class RedactorConfig:
     salt: bytes
     terms: tuple[str, ...] = ()
+    # A card statement's transaction lines are merchants, so the bundled name lists are not applied
+    # to them ("Sagar Ratna" is a restaurant). The owner's own terms always are.
+    card_statement: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,7 +167,11 @@ _BUSINESS_WORDS = frozenset(
     hardware paints furniture mattress laundry dryclean cleaners cleaning courier logistics
     airlines airways airport railway railways metro toll parking autopay mandate subscription
     online digital cloud software labs sciences clinic hospitals nursing emporium industries
-    international global india indian national united royal grand""".split()
+    international global india indian national united royal grand electricals electrical ratna
+    bhawan bhandar kirana general sons brothers bros tailors tailor opticians motors garage
+    barber parlour parlor beauty wellness yoga classes coaching tuition tutorials mithai tiffin
+    pharma chemist druggist polyclinic diagnostic supply supplies distributors associates
+    apartments residency maintenance""".split()
 )
 _BRANDS = frozenset(
     """swiggy zomato amazon flipkart blinkit zepto instamart bigbasket uber ola rapido apple google
@@ -173,6 +180,8 @@ _BRANDS = frozenset(
     irctc makemytrip goibibo redbus bookmyshow pvr inox dmart reliance tata bajaj hdfc icici axis
     sbi kotak yes idfc""".split()
 )
+_HELD = "\ue000"  # stands in for a payee held back from the name lists
+_POS_LINE = re.compile(r"^\s*(?:DC INTL )?(?:POS|ECOM|EME)\b", re.I)
 _TITLES = frozenset({"mr", "mrs", "ms", "miss", "shri", "smt", "sri", "dr", "master", "late"})
 
 # Where the other party's name sits in a UPI, IMPS or NEFT narration.
@@ -219,6 +228,7 @@ class Redactor:
         if not config.salt:
             raise RedactionError("a salt is required")
         self._salt = config.salt
+        self._card_statement = config.card_statement
         self._terms = sorted({t.strip() for t in config.terms if t.strip()}, key=len, reverse=True)
         self._term_words = {
             w.casefold() for t in self._terms for w in _WORD.findall(t) if len(w) >= 3
@@ -262,6 +272,7 @@ class _Run:
         self.r = r
         self.counts: Counter[str] = Counter()
         self.fingerprint: str | None = None
+        self.in_transactions = False  # set while the rows of a statement are being read
 
     def hit(self, cls: str, value: str) -> str:
         self.counts[cls] += 1
@@ -269,23 +280,26 @@ class _Run:
 
     # strings --------------------------------------------------------------------------
 
-    def _payee(self, text: str) -> str:
-        """The other party's name, when the narration's structure says it is a person's."""
+    def _payee(self, text: str) -> tuple[str, str | None]:
+        """The other party's name, when the narration's structure says it is a person's. When the
+        structure says it is a business, that payee is held back from the name lists (returned
+        with a marker in its place) so a word like "Sagar" or "Sharma" cannot hide what it is."""
         for rail in _PAYEE_RAILS:
             m = rail.match(text)
             if m is None:
                 continue
             payee = m.group("payee")
             if looks_like_person(payee):
-                return text[: m.start("payee")] + self.hit(PERSON, payee) + text[m.end("payee") :]
-            return text
-        return text
+                token = self.hit(PERSON, payee)
+                return text[: m.start("payee")] + token + text[m.end("payee") :], None
+            return text[: m.start("payee")] + _HELD + text[m.end("payee") :], payee
+        return text, None
 
     def scrub(self, text: str) -> str:
         """Terms, the payee, patterns, then names, on one string."""
         for term_re in self.r._term_res:
             text = term_re.sub(lambda m: self.hit(PERSON, m.group()), text)
-        text = self._payee(text)
+        text, held = self._payee(text)
 
         def master(m: re.Match[str]) -> str:
             kind = m.lastgroup
@@ -304,7 +318,19 @@ class _Run:
             return self.hit(cls, m.group())
 
         text = _MASTER.sub(master, text)
-        return self._names(text)
+        if self._merchant_line(text):
+            out = text  # the owner's terms already ran; the lists would only hide a merchant
+        else:
+            out = self._names(text)
+        if held is not None:
+            out = out.replace(_HELD, _MASTER.sub(master, held), 1)
+        return out
+
+    def _merchant_line(self, text: str) -> bool:
+        """A card purchase, where a listed name is part of a shop's name, not a person."""
+        return _POS_LINE.match(text) is not None or (
+            self.r._card_statement and self.in_transactions
+        )
 
     def _note_card(self, text: str) -> None:
         """A masked card number inside text about to be redacted still identifies the account."""
@@ -387,6 +413,7 @@ class _Run:
             address_cells |= {(i, col) for i in self._address_rows(column)}
         id_columns: set[int] = set()
         for i, row in enumerate(rows):
+            self.in_transactions = i >= zone
             for j in range(len(row)):
                 if (i, j) in address_cells and isinstance(row[j], str):
                     self._note_card(row[j])
@@ -498,6 +525,7 @@ class _Run:
         address = self._address_rows(lines[:zone])
         out: list[str] = []
         for i, line in enumerate(lines):
+            self.in_transactions = i >= zone
             if i in address:
                 self._note_card(line)
                 out.append(self.hit(ADDRESS, line))

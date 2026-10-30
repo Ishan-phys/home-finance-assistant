@@ -130,6 +130,7 @@ def upload_statement(
                 RedactorConfig(
                     salt=SettingsRepository(s).salt(),
                     terms=tuple(RedactionTermRepository(s).list_all()),
+                    card_statement=bool(account and account.binding and "card" in account.binding),
                 )
             )
             labels = ledger_labels(s)

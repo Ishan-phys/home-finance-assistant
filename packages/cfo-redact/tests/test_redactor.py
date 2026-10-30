@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
 import pytest
@@ -368,3 +369,54 @@ def test_a_name_split_by_a_fixed_width_wrap_is_still_caught() -> None:
         .document.rows[0][0]
     )
     assert "ARJU" not in out and "MEHTA" not in out and " N " not in out.split("Mr.")[1][:12]
+
+
+SALT = b"s" * 32
+
+
+def _scrub(text: str, **kw: object) -> str:
+    return Redactor(RedactorConfig(salt=SALT, **kw)).redact_text(text)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("narration", "kept"),
+    [
+        ("UPI-SHARMA ELECTRICALS-sharma@ybl-YESB0YBLUPI-123456789012-UPI", "SHARMA ELECTRICALS"),
+        ("UPI-SAGAR RATNA-sagarratna@ybl-YESB0YBLUPI-123456789012-UPI", "SAGAR RATNA"),
+        ("UPI-OM SWEETS-omsweets@paytm-YESB0PTMUPI-123456789012-UPI", "OM SWEETS"),
+        ("POS 400000XXXXXX1234 SAGAR RATNA 04SEP26 18:55:11 BANGALORE", "SAGAR RATNA"),
+        ("UPI-APEX BADMINTON-apex@ybl-YESB0YBLUPI-123456789012-UPI", "APEX BADMINTON"),
+    ],
+)
+def test_businesses_with_name_like_words_stay_readable(narration: str, kept: str) -> None:
+    out = _scrub(narration)
+    assert kept in out
+    assert "sagarratna" not in out and "123456789012" not in out  # handles and refs still go
+
+
+def test_a_person_payee_is_still_a_stable_token() -> None:
+    a = _scrub("UPI-VIKRAM KAPOOR-vikram@okhdfcbank-HDFC0000001-123456789012-RENT")
+    b = _scrub("UPI-VIKRAM KAPOOR-vikram@okhdfcbank-HDFC0000001-999999999999-RENT")
+    assert "VIKRAM" not in a and "KAPOOR" not in a and a.endswith("-RENT")
+    assert re.search(r"\[PERSON:[0-9a-f]{4}\]", a)
+    assert a.split("-")[1] == b.split("-")[1]
+
+
+def test_owner_terms_still_apply_to_merchant_lines() -> None:
+    out = _scrub("POS 400000XXXXXX1234 ISHAN CAFE 04SEP26 18:55:11", terms=("Ishan",))
+    assert "ISHAN" not in out and "CAFE" in out
+
+
+def test_card_statement_transactions_skip_the_name_lists_but_the_header_does_not() -> None:
+    doc = Document.text(
+        [
+            "Axis Bank Credit Card Monthly Statement",
+            "Name: Rohit Mehra",
+            "08 Sep '26 SAGAR RATNA,BANGALORE ₹ 435.00 Debit",
+        ]
+    )
+    out = Redactor(RedactorConfig(salt=SALT, card_statement=True)).redact(doc).document.full_text
+    assert "SAGAR RATNA" in out
+    assert "Rohit" not in out and "Mehra" not in out
+    plain = Redactor(RedactorConfig(salt=SALT)).redact(doc).document.full_text
+    assert "SAGAR RATNA" not in plain  # without the flag, behaviour is unchanged
