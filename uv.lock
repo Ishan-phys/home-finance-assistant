@@ -20,6 +20,7 @@ members = [
     "cfo-metrics",
     "cfo-parse",
     "cfo-redact",
+    "cfo-rules",
     "cfo-testing",
 ]
 
@@ -38,6 +39,7 @@ dependencies = [
     { name = "cfo-metrics" },
     { name = "cfo-parse" },
     { name = "cfo-redact" },
+    { name = "cfo-rules" },
 ]
 
 [package.dev-dependencies]
@@ -65,6 +67,7 @@ requires-dist = [
     { name = "cfo-metrics", editable = "packages/cfo-metrics" },
     { name = "cfo-parse", editable = "packages/cfo-parse" },
     { name = "cfo-redact", editable = "packages/cfo-redact" },
+    { name = "cfo-rules", editable = "packages/cfo-rules" },
 ]
 
 [package.metadata.requires-dev]
@@ -638,6 +641,17 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "cfo-doc", editable = "packages/cfo-doc" }]
+
+[[package]]
+name = "cfo-rules"
+version = "0.1.0"
+source = { editable = "packages/cfo-rules" }
+dependencies = [
+    { name = "cfo-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "cfo-core", editable = "packages/cfo-core" }]
 
 [[package]]
 name = "cfo-testing"
