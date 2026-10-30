@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 
-from cfo.api import errors
+from cfo.api import errors, guard
 from cfo.api.chat import ChatRegistry
 from cfo.api.config import Settings
 from cfo.categorize.categorizer import AnthropicClient, ModelClient
@@ -98,6 +98,7 @@ def create_app(
     )
     app = FastAPI(title="AI CFO", version="0.1.0")
     errors.install(app)
+    guard.install(app, cfg.allowed_hosts or guard.DEFAULT_HOSTS)
     model = chat_model or build_chat_model(cfg)
     app.include_router(build_router(deps, ChatRegistry(deps.db, clock, model)))
     app.state.deps = deps
