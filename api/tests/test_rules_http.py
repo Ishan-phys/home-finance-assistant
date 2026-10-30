@@ -61,3 +61,17 @@ def test_preview_then_apply_moves_matching_rows(api: Any) -> None:
     assert made["applied"] == matches
     rows = api.get("/transactions", params={"q": "GROCER"}).json()
     assert rows and all(r["category"]["name"] == "Health" for r in rows)
+
+
+def test_suggestion_and_match_count_work_before_a_category_is_chosen(api: Any) -> None:
+    upload(api)
+    row = api.get("/transactions", params={"q": "GROCER"}).json()[0]
+    s = api.get(f"/transactions/{row['id']}/rule-suggestion").json()
+    assert s["way"] == "debit" and s["match_text"].strip()
+    n = api.post("/rules/match-count", json={"match_text": s["match_text"], "way": s["way"]})
+    assert n.json()["matches"] >= 1
+    assert api.post("/rules/match-count", json={"match_text": " "}).status_code == 422
+    assert (
+        api.get("/transactions/00000000-0000-0000-0000-000000000000/rule-suggestion").status_code
+        == 404
+    )

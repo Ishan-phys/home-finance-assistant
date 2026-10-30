@@ -86,6 +86,11 @@ def _candidates(
     return out
 
 
+def count_matches(s: Session, rule: Rule, originals: Mapping[Id, str] | None = None) -> int:
+    """How many existing transactions the rule's text matches, whatever it would post them to."""
+    return len(_candidates(s, rule, originals))
+
+
 def preview_rule(s: Session, rule: Rule, originals: Mapping[Id, str] | None = None) -> int:
     """How many existing transactions applying the rule would move."""
     target = _target(s, rule)

@@ -10,12 +10,12 @@ from cfo.api.deps import ScopeDep
 from cfo.api.originals import read_originals
 from cfo.core.chart import IN_TRANSIT
 from cfo.core.errors import InvalidInput, NotFoundError
-from cfo.core.types import AccountRole
+from cfo.core.types import AccountRole, Origin
 from cfo.ledger.repositories.accounts import AccountRepository
 from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.transactions import JournalRepository
-from cfo.ledger.rules_service import apply_rule, preview_rule
-from cfo.rules import MatchMode, Rule, Way
+from cfo.ledger.rules_service import apply_rule, count_matches, preview_rule
+from cfo.rules import MatchMode, Rule, Way, suggest_match_text
 from fastapi import APIRouter, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
@@ -50,6 +50,19 @@ class RulePatch(BaseModel):
     @classmethod
     def _not_blank(cls, value: str | None) -> str | None:
         if value is not None and not value.strip():
+            raise ValueError("a rule needs some text to match")
+        return value
+
+
+class MatchCountIn(BaseModel):
+    match_text: str = Field(min_length=1, max_length=200)
+    mode: MatchMode = MatchMode.CONTAINS
+    way: Way = "any"
+
+    @field_validator("match_text")
+    @classmethod
+    def _not_blank(cls, value: str) -> str:
+        if not value.strip():
             raise ValueError("a rule needs some text to match")
         return value
 
@@ -145,6 +158,25 @@ def add_rule_routes(r: APIRouter, deps: Deps) -> None:
                 _target_path(s, body.target_id), 0,
             )  # fmt: skip
             return {"matches": preview_rule(s, draft, originals(s))}
+
+    @r.post("/rules/match-count")
+    def match_count(scope: ScopeDep, body: MatchCountIn) -> Json:
+        """How many existing transactions this text would move, before a category is chosen."""
+        with db.transaction(scope) as s:
+            draft = Rule(UUID(int=0), body.match_text, body.match_text, body.mode, body.way, "-", 0)
+            return {"matches": count_matches(s, draft, originals(s))}
+
+    @r.get("/transactions/{tx_id}/rule-suggestion")
+    def rule_suggestion(scope: ScopeDep, tx_id: UUID) -> Json:
+        """A starting point for "always do this": text from the transaction's own narration."""
+        with db.transaction(scope) as s:
+            tx = JournalRepository(s).get(tx_id)
+            if tx is None:
+                raise NotFoundError(f"unknown transaction {tx_id}")
+            observed = next((p for p in tx.postings if p.origin is Origin.OBSERVED), None)
+            way: Way = "credit" if observed is not None and observed.amount > 0 else "debit"
+            text = read_originals(s, deps.vault, [tx_id]).get(tx_id) or tx.narration
+            return {"match_text": suggest_match_text(text), "way": way}
 
     @r.post("/rules/{rule_id}/apply")
     def apply(scope: ScopeDep, rule_id: UUID) -> Json:
