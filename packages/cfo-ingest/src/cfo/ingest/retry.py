@@ -8,6 +8,7 @@ from typing import Literal
 from cfo.categorize.categorizer import ModelClient
 from cfo.categorize.port import Categorizer, Item, as_categorizer
 from cfo.core.types import Scope
+from cfo.ingest.examples import owner_examples
 from cfo.ingest.masking import build_masker
 from cfo.ingest.upload import ledger_labels
 from cfo.ledger.journal import apply_to_uncategorized, uncategorized_rows
@@ -36,10 +37,11 @@ def retry_categorization(
             known = {**known, **rule_mappings(active_rules(s), directions, known)}
             masker = build_masker(s)
             labels = ledger_labels(s)
+            examples = owner_examples(s)
         todo = [d for d in directions if d not in known]
         categorizer = as_categorizer(client, masker)
         assert categorizer is not None
-        result = categorizer.categorize([Item(d, directions[d]) for d in todo], labels)
+        result = categorizer.categorize([Item(d, directions[d]) for d in todo], labels, examples)
         with db.transaction(scope) as s:
             MappingRepository(s).save_model(result.mappings.values())
             updated = apply_to_uncategorized(s, {**known, **result.mappings})

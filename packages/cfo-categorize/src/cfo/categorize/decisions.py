@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from cfo.categorize.categorizer import CategorizationResult
+from cfo.categorize.examples import Example, pick_examples, render_examples
 from cfo.categorize.labels import Label, labels_for
 from cfo.categorize.merchants import PERSONAL_TRANSFER, clean_merchant
 from cfo.categorize.port import Item
@@ -77,14 +78,14 @@ class _Outcome:
     aborted: bool = False  # the service is unreachable or refuses us: stop asking
 
 
-def _input_text(item: Item) -> str:
+def _input_text(item: Item, examples: Sequence[Example] = ()) -> str:
     way = {"debit": "debit (money out)", "credit": "credit (money in)"}.get(
         item.direction or "", "unknown"
     )
     return (
         "A line from an Indian bank or credit card statement. Personal details were replaced by "
         "tokens such as [PERSON:ab12], which are unknown people or numbers.\n"
-        f"Direction: {way}\nNarration: {item.description}"
+        f"Direction: {way}\nNarration: {item.description}" + render_examples(examples)
     )
 
 
@@ -104,7 +105,9 @@ class DecisionsCategorizer:
         self.max_requests = max_requests
         self.workers = workers
 
-    def categorize(self, items: Sequence[Item], labels: Sequence[Label]) -> CategorizationResult:
+    def categorize(
+        self, items: Sequence[Item], labels: Sequence[Label], examples: Sequence[Example] = ()
+    ) -> CategorizationResult:
         distinct = list({i.description: i for i in items if i.description}.values())
         warnings: list[str] = []
         todo, skipped = distinct[: self.max_requests], distinct[self.max_requests :]
@@ -114,7 +117,7 @@ class DecisionsCategorizer:
                 f"{len(skipped)} left Uncategorized"
             )
         with ThreadPoolExecutor(max_workers=self.workers) as pool:
-            outcomes = list(pool.map(lambda item: self._one(item, labels), todo))
+            outcomes = list(pool.map(lambda item: self._one(item, labels, examples), todo))
         mappings = {
             item.description: o.mapping
             for item, o in zip(todo, outcomes, strict=True)
@@ -131,14 +134,14 @@ class DecisionsCategorizer:
         )
         return CategorizationResult(mappings, unresolved, tuple(warnings), tokens)
 
-    def _one(self, item: Item, labels: Sequence[Label]) -> _Outcome:
+    def _one(self, item: Item, labels: Sequence[Label], examples: Sequence[Example]) -> _Outcome:
         offered = labels_for(item.direction, labels)
         import openai
 
         try:
             decision = self.client.decisions.create(
                 model=self.model,
-                input=_input_text(item),
+                input=_input_text(item, pick_examples(examples, [item], 8)),
                 questions=[_category_question(offered), _COUNTERPARTY_QUESTION],
             )
         except (

@@ -342,3 +342,31 @@ def test_owner_rule_categorizes_before_the_model_and_beats_it(database: Database
         from cfo.ledger.verify import verify_books
 
         assert verify_books(s) == []
+
+
+def test_a_hand_decision_reaches_the_model_as_an_example_on_retry(database: Database) -> None:
+    from cfo.categorize.categorizer import CategorizationResult
+
+    class Recording:
+        def __init__(self) -> None:
+            self.examples: list = []
+            self.asked: list[str] = []
+
+        def categorize(self, items, labels, examples=()):  # type: ignore[no-untyped-def]
+            self.examples, self.asked = list(examples), [i.description for i in items]
+            return CategorizationResult()
+
+    accts = accounts(database)
+    upload(database, accts["bank"], "hdfc_bank_sep.csv", Down())  # nothing categorized
+    cafe = next(
+        t for t in txs(database) if "TEST CAFE" in t.narration and "REFUND" not in t.narration
+    )
+    with database.transaction() as s:
+        health = AccountRepository(s).by_path("Expenses:Health")
+        recategorize(s, cafe.id, health.id)
+    model = Recording()
+    retry_categorization(database, model)
+    assert any("CAFE REFUND" in d for d in model.asked)
+    (example,) = model.examples
+    assert example.description == cafe.narration
+    assert example.label.startswith("category_")  # the model sees a key, never the real path

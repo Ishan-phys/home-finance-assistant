@@ -31,6 +31,7 @@ from cfo.core.types import (
     Scope,
 )
 from cfo.ingest.dedup import HashedRow, hash_rows
+from cfo.ingest.examples import owner_examples
 from cfo.ingest.masking import build_masker
 from cfo.ledger.journal import (
     RowIn,
@@ -173,6 +174,7 @@ def upload_statement(
             fresh = [h for h in hashed if h.dedup_hash not in stored]
             known = MappingRepository(s).get_many(h.row.raw_description for h in fresh)
             rules = active_rules(s)
+            examples = owner_examples(s)
             masker = build_masker(s)
 
         # Owner rules come before the model and win over a mapping only the model made.
@@ -202,7 +204,7 @@ def upload_statement(
                 warnings.append("categorization skipped: no model is configured")
             else:
                 result = categorizer.categorize(
-                    [Item(d, way) for d, way in unmapped.items()], labels
+                    [Item(d, way) for d, way in unmapped.items()], labels, examples
                 )
                 warnings.extend(result.warnings)
                 mappings.update(result.mappings)
