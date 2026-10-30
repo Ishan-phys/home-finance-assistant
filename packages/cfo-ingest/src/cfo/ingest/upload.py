@@ -49,10 +49,9 @@ from cfo.ledger.repositories.accounts import (
     SettingsRepository,
 )
 from cfo.ledger.repositories.db import Database
-from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.scope import ScopeMissingError
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
-from cfo.ledger.rules_service import rule_mappings
+from cfo.ledger.rules_service import active_rules, rule_mappings
 from cfo.ledger.setup import is_set_up
 from cfo.parse.base import ParsedStatement, ParseFailed
 from cfo.parse.readers import read_document
@@ -82,7 +81,7 @@ def ledger_labels(s: Session) -> list[Label]:
         Label(
             a.path,
             a.display_name,
-            a.description or a.display_name,
+            (a.description or a.display_name) + (f" Also: {a.keywords}." if a.keywords else ""),
             "credit" if a.direction is Direction.IN else "debit",
         )
         for a in AccountRepository(s).list_all(AccountRole.CATEGORY)
@@ -172,7 +171,7 @@ def upload_statement(
             )
             fresh = [h for h in hashed if h.dedup_hash not in stored]
             known = MappingRepository(s).get_many(h.row.raw_description for h in fresh)
-            rules = RuleRepository(s).list_all()
+            rules = active_rules(s)
             masker = build_masker(s)
 
         # Owner rules come before the model and win over a mapping only the model made.

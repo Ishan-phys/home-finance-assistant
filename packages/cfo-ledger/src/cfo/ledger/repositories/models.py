@@ -169,6 +169,7 @@ class AccountRow(Base):
     type: Mapped[str | None] = mapped_column(String(32))
     grp: Mapped[str | None] = mapped_column(String(16))
     description: Mapped[str | None] = mapped_column(Text)
+    keywords: Mapped[str] = mapped_column(Text, server_default="")
     direction: Mapped[str | None] = mapped_column(String(8))
     heading: Mapped[str] = mapped_column(String(16), server_default="regular")
     institution: Mapped[str | None] = mapped_column(Text)

@@ -10,13 +10,25 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Literal
 
+from cfo.core.chart import IN_TRANSIT
 from cfo.core.errors import InvalidInput
-from cfo.core.ids import Id
-from cfo.core.types import Account, MappingSource, MerchantMapping, Origin, Posting
+from cfo.core.ids import Id, new_id
+from cfo.core.types import (
+    Account,
+    AccountRole,
+    Direction,
+    MappingSource,
+    MerchantMapping,
+    Origin,
+    Posting,
+    Scope,
+)
 from cfo.ledger.journal import _counter, _usable, pair_in_transit
 from cfo.ledger.repositories.accounts import AccountRepository
+from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
-from cfo.rules import Rule, first_match
+from cfo.rules import MatchMode, Rule, first_match
+from cfo.rules import Way as RuleWay
 from sqlalchemy.orm import Session
 
 Way = Literal["debit", "credit"]
@@ -99,3 +111,55 @@ def _target(s: Session, rule: Rule) -> Account:
     if target is None or not _usable(target):
         raise InvalidInput("this rule points at a category that is retired or missing")
     return target
+
+
+# Starter rules: card bill payments are transfers (never spending), cashback is a reward.
+# Editable and deletable like any rule. Not shipped: anything naming a service that is also used
+# for other payments (CRED pays rent and bills too), so the owner adds those from their own rows.
+STARTER_RULES: tuple[tuple[str, str, RuleWay, str], ...] = (
+    ("Card bill payment", "BPPY CC PAYMENT", "any", IN_TRANSIT),
+    ("Card bill payment", "CREDIT CARD PAYMENT", "any", IN_TRANSIT),
+    ("Card bill payment", "CC PAYMENT", "any", IN_TRANSIT),
+    ("Card bill payment", "MB/IB PAYMENT", "any", IN_TRANSIT),
+    ("Card bill payment", "PAYMENT RECEIVED", "credit", IN_TRANSIT),
+    ("Card cashback", "CASHBACK", "any", "Income:Rewards"),
+)
+
+KEYWORD_POSITION = 1_000_000  # keyword rules run after every owner rule
+
+
+def seed_starter_rules(s: Session, scope: Scope | None = None) -> int:
+    """Give a new ledger the starter rules. Does nothing once the ledger has any rule, so rules
+    the owner deleted stay deleted."""
+    repo = RuleRepository(s, scope)
+    if repo.list_all():
+        return 0
+    for label, text, way, target in STARTER_RULES:
+        repo.add(label, text, MatchMode.CONTAINS, way, target, builtin=True)
+    return len(STARTER_RULES)
+
+
+def keyword_rules(s: Session) -> list[Rule]:
+    """The owner's per-category keywords as the lowest-priority rules. Not stored: they follow
+    whatever the keywords say now."""
+    out: list[Rule] = []
+    for a in AccountRepository(s).list_all(AccountRole.CATEGORY):
+        way: RuleWay = "credit" if a.direction is Direction.IN else "debit"
+        for word in [w.strip() for w in a.keywords.split(",") if w.strip()]:
+            out.append(
+                Rule(
+                    new_id(),
+                    a.display_name,
+                    word,
+                    MatchMode.CONTAINS,
+                    way,
+                    a.path,
+                    KEYWORD_POSITION + len(out),
+                )  # fmt: skip
+            )
+    return out
+
+
+def active_rules(s: Session) -> list[Rule]:
+    """The owner's rules, then keyword rules: what an upload or a retry matches against."""
+    return [*RuleRepository(s).list_all(), *keyword_rules(s)]

@@ -153,6 +153,7 @@ def account_json(a: Account, balance: int | None = None) -> Json:
         "binding": a.binding,
         "manual": bool(a.type and a.type.manual),
         "description": a.description,
+        "keywords": a.keywords,
         "direction": a.direction.value if a.direction else None,
         "heading": a.heading.value,
         "retired": not a.active,

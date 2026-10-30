@@ -34,7 +34,10 @@ def test_create_list_edit_reorder_delete(api: Any) -> None:
     edited = api.patch(f"/rules/{a.json()['id']}", json={"label": "Chemist"}).json()
     assert edited["label"] == "Chemist" and edited["target"]["name"] == "Health"
     assert api.delete(f"/rules/{b.json()['id']}").status_code == 204
-    assert len(api.get("/rules").json()) == 1
+    left = api.get("/rules").json()
+    assert a.json()["id"] in [x["id"] for x in left] and b.json()["id"] not in [
+        x["id"] for x in left
+    ]
 
 
 def test_blank_text_and_bad_target_are_rejected(api: Any) -> None:

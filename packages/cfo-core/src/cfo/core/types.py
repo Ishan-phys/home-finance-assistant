@@ -120,6 +120,7 @@ class Account:
     type: AccountType | None = None  # real accounts only
     group: Group | None = None  # real accounts only
     description: str | None = None  # categories: what the category is for
+    keywords: str = ""  # categories: a few comma-separated words that mark a narration as this
     direction: Direction | None = None  # categories only
     heading: Heading = Heading.REGULAR
     institution: str | None = None

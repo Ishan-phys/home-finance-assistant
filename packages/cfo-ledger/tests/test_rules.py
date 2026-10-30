@@ -129,3 +129,34 @@ def test_transfer_rule_pairs_card_payment_out_of_spending(database) -> None:  # 
         txs = JournalRepository(s).list_all()
         assert len(txs) == 1 and {p.account_id for p in txs[0].postings} == {sav.id, card.id}
         assert verify_books(s) == []
+
+
+def test_starter_rules_seed_once_and_deleted_ones_stay_deleted(database) -> None:  # type: ignore[no-untyped-def]
+    from cfo.ledger.rules_service import STARTER_RULES, keyword_rules, seed_starter_rules
+
+    with database.transaction() as s:
+        assert seed_starter_rules(s) == len(STARTER_RULES)
+        assert seed_starter_rules(s) == 0
+        repo = RuleRepository(s)
+        for r in repo.list_all():
+            repo.delete(r.id)
+        assert repo.list_all() == []
+        assert keyword_rules(s) == []
+
+
+def test_keywords_become_lowest_priority_rules(database) -> None:  # type: ignore[no-untyped-def]
+    from cfo.ledger.rules_service import active_rules
+    from cfo.ledger.setup import edit_category
+
+    with database.transaction() as s:
+        grooming = AccountRepository(s).by_path("Expenses:Grooming")
+        edit_category(s, grooming.id, keywords=" haircut, Spa ,spa, massage")
+        assert AccountRepository(s).by_path("Expenses:Grooming").keywords == "haircut, Spa, massage"
+        owner = RuleRepository(s).add("Mine", "haircut", MatchMode.CONTAINS, "any", "Expenses:Fees")
+        rules = active_rules(s)
+        assert rules[0].id == owner.id and {r.match_text for r in rules[1:]} == {
+            "haircut",
+            "Spa",
+            "massage",
+        }
+        assert all(r.way == "debit" and r.target == "Expenses:Grooming" for r in rules[1:])

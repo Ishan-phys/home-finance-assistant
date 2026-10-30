@@ -23,8 +23,8 @@ SYSTEM_PROMPT = (
     "You categorize Indian bank and credit card statement narrations. "
     "For each numbered narration, marked (debit) for money out or (credit) for money in, return "
     "a cleaned merchant name (the business, without reference numbers, UPI handles, or card "
-    "digits) and exactly one category key from the list below. A merchant refund is a credit to "
-    "that merchant's own category. Money between the person's own accounts, a credit card bill "
+    "digits) and exactly one category key from the list below. A refund or reversal of a purchase is a "
+    "credit: give it the category named Refunds when the list has one. Money between the person's own accounts, a credit card bill "
     "payment, and investments take the key {own}. If none fits, leave the line out by omitting "
     "its id. Reply with JSON only, in this shape: "
     '{{"items": [{{"id": 1, "merchant": "Swiggy", "category": "Expenses:Food:Dining"}}]}}. '

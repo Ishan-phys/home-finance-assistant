@@ -14,7 +14,7 @@ from cfo.api.labels import apply_labels
 from cfo.api.rules_routes import add_rule_routes
 from cfo.api.sample import default_seed_client, load_sample
 from cfo.core.errors import ConflictError, NotFoundError
-from cfo.core.types import AccountRole, AccountType, Direction
+from cfo.core.types import AccountRole, AccountType, Direction, Scope
 from cfo.ingest.masking import build_masker
 from cfo.ingest.retry import retry_categorization
 from cfo.ingest.upload import upload_statement
@@ -27,6 +27,7 @@ from cfo.ledger.repositories.accounts import (
     SettingsRepository,
 )
 from cfo.ledger.repositories.people import PeopleRepository
+from cfo.ledger.rules_service import seed_starter_rules
 from cfo.ledger.setup import (
     AccountInput,
     CategoryInput,
@@ -81,6 +82,7 @@ class CategoryIn(BaseModel):
 class CategoryPatch(BaseModel):
     name: str | None = Field(default=None, max_length=60)
     description: str | None = Field(default=None, max_length=200)
+    keywords: str | None = Field(default=None, max_length=1000)
 
 
 class MergeIn(BaseModel):
@@ -162,6 +164,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
         categories, and their name and any family names seed its redaction terms."""
         with db.transaction() as s:
             person, ledger = PeopleRepository(s).create(body.name, body.family_names)
+            seed_starter_rules(s, Scope.of(ledger.id))
         return {"id": str(person.id), "name": person.name, "ledger_id": str(ledger.id)}
 
     @top.get("/people")
@@ -334,7 +337,9 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
     @r.patch("/categories/{category_id}")
     def patch_category(scope: ScopeDep, category_id: UUID, body: CategoryPatch) -> Json:
         with db.transaction(scope) as s:
-            account = edit_category(s, category_id, name=body.name, description=body.description)
+            account = edit_category(
+                s, category_id, name=body.name, description=body.description, keywords=body.keywords
+            )
             return reports.plain(reports.account_json(account))  # type: ignore[no-any-return]
 
     @r.post("/categories/{category_id}/merge")
