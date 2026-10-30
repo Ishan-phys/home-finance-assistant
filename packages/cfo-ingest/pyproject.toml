@@ -8,6 +8,7 @@ dependencies = [
     "cfo-parse",
     "cfo-redact",
     "cfo-categorize",
+    "cfo-vault",
     "cfo-ledger",
 ]
 
@@ -23,4 +24,5 @@ cfo-core = { workspace = true }
 cfo-parse = { workspace = true }
 cfo-redact = { workspace = true }
 cfo-categorize = { workspace = true }
+cfo-vault = { workspace = true }
 cfo-ledger = { workspace = true }

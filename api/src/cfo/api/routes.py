@@ -11,9 +11,11 @@ from cfo.api.catalog import build_catalog, resolve_binding
 from cfo.api.chat import ChatRegistry, add_chat_routes
 from cfo.api.deps import ScopeDep
 from cfo.api.labels import apply_labels
+from cfo.api.originals import attach_originals
+from cfo.api.rules_routes import add_rule_routes
 from cfo.api.sample import default_seed_client, load_sample
 from cfo.core.errors import ConflictError, NotFoundError
-from cfo.core.types import AccountRole, AccountType, Direction
+from cfo.core.types import AccountRole, AccountType, Direction, Scope
 from cfo.ingest.masking import build_masker
 from cfo.ingest.retry import retry_categorization
 from cfo.ingest.upload import upload_statement
@@ -26,6 +28,7 @@ from cfo.ledger.repositories.accounts import (
     SettingsRepository,
 )
 from cfo.ledger.repositories.people import PeopleRepository
+from cfo.ledger.rules_service import seed_starter_rules
 from cfo.ledger.setup import (
     AccountInput,
     CategoryInput,
@@ -80,6 +83,7 @@ class CategoryIn(BaseModel):
 class CategoryPatch(BaseModel):
     name: str | None = Field(default=None, max_length=60)
     description: str | None = Field(default=None, max_length=200)
+    keywords: str | None = Field(default=None, max_length=1000)
 
 
 class MergeIn(BaseModel):
@@ -161,6 +165,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
         categories, and their name and any family names seed its redaction terms."""
         with db.transaction() as s:
             person, ledger = PeopleRepository(s).create(body.name, body.family_names)
+            seed_starter_rules(s, Scope.of(ledger.id))
         return {"id": str(person.id), "name": person.name, "ledger_id": str(ledger.id)}
 
     @top.get("/people")
@@ -286,6 +291,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
             today(),
             password or None,
             scope,
+            deps.vault,
         )
         return {
             "import_id": str(result.import_id),
@@ -312,7 +318,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
     def retry(scope: ScopeDep) -> Json:
         if deps.client is None:
             raise ConflictError("no model is configured")
-        result = retry_categorization(db, deps.client, scope)
+        result = retry_categorization(db, deps.client, scope, deps.vault)
         return {"rows_updated": result.rows_updated, "warnings": list(result.warnings)}
 
     # categories -----------------------------------------------------------------------
@@ -333,7 +339,9 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
     @r.patch("/categories/{category_id}")
     def patch_category(scope: ScopeDep, category_id: UUID, body: CategoryPatch) -> Json:
         with db.transaction(scope) as s:
-            account = edit_category(s, category_id, name=body.name, description=body.description)
+            account = edit_category(
+                s, category_id, name=body.name, description=body.description, keywords=body.keywords
+            )
             return reports.plain(reports.account_json(account))  # type: ignore[no-any-return]
 
     @r.post("/categories/{category_id}/merge")
@@ -373,6 +381,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
                 q=q,
                 limit=limit,
             )
+            attach_originals(s, deps.vault, rows, "id")
         return labelled(scope, rows)  # type: ignore[no-any-return]
 
     @r.patch("/transactions/{tx_id}/category")
@@ -419,6 +428,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
     def inbox(scope: ScopeDep) -> list[Json]:
         with db.transaction(scope) as s:
             out = reports.inbox_report(data(s))
+            attach_originals(s, deps.vault, out, "transaction_id")
         return labelled(scope, out)  # type: ignore[no-any-return]
 
     # settings -------------------------------------------------------------------------
@@ -480,6 +490,7 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
         return {"token": body.token, "label": body.label.strip() or None}
 
     add_chat_routes(r, chats)
+    add_rule_routes(r, deps)
     top.include_router(r)
     return top
 

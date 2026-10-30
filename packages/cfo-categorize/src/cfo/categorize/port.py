@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from typing import Protocol, runtime_checkable
 
 from cfo.categorize.categorizer import CategorizationResult, GenerativeCategorizer, ModelClient
+from cfo.categorize.examples import Example, mask_examples, pick_examples
 from cfo.categorize.labels import (
     OWN_MOVE_LABEL,
     Label,
@@ -21,6 +22,7 @@ from cfo.categorize.labels import (
 __all__ = [
     "OWN_MOVE_LABEL",
     "Categorizer",
+    "Example",
     "Item",
     "Label",
     "MaskedCategorizer",
@@ -41,9 +43,12 @@ class Item:
 
 @runtime_checkable
 class Categorizer(Protocol):
-    def categorize(self, items: Sequence[Item], labels: Sequence[Label]) -> CategorizationResult:
-        """Label each item with one of `labels`. Anything the model could not label confidently
-        is left out of `mappings` and listed in `unresolved`. Never raises for a model failure."""
+    def categorize(
+        self, items: Sequence[Item], labels: Sequence[Label], examples: Sequence[Example] = ()
+    ) -> CategorizationResult:
+        """Label each item with one of `labels`; `examples` are the owner's past decisions on
+        similar lines. Anything the model could not label confidently is left out of `mappings`
+        and listed in `unresolved`. Never raises for a model failure."""
         ...
 
 
@@ -54,7 +59,9 @@ class MaskedCategorizer:
     def __init__(self, inner: Categorizer, masker: NarrationMasker) -> None:
         self.inner, self.masker = inner, masker
 
-    def categorize(self, items: Sequence[Item], labels: Sequence[Label]) -> CategorizationResult:
+    def categorize(
+        self, items: Sequence[Item], labels: Sequence[Label], examples: Sequence[Example] = ()
+    ) -> CategorizationResult:
         back: dict[str, str] = {}
         masked: list[Item] = []
         for item in items:
@@ -62,7 +69,12 @@ class MaskedCategorizer:
             back.setdefault(text, item.description)
             masked.append(Item(text, item.direction))
         sent, keys = mask_labels(labels, self.masker)
-        result = self.inner.categorize(masked, sent)
+        shown = mask_examples(
+            pick_examples(examples, items),
+            self.masker,
+            {path: key for key, path in keys.items()},
+        )
+        result = self.inner.categorize(masked, sent, shown)
         mappings = {
             back.get(k, k): replace(m, lookup_key=back.get(k, k), label=keys[m.label])
             for k, m in result.mappings.items()

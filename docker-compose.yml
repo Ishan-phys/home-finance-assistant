@@ -21,6 +21,10 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+psycopg://cfo:${POSTGRES_PASSWORD:-cfo-local-dev}@db:5432/cfo
+      # Original narrations are kept encrypted with this key; losing the volume loses the readable text.
+      NARRATION_KEY_FILE: /keys/narration.key
+    volumes:
+      - keys:/keys
     depends_on:
       db:
         condition: service_healthy
@@ -39,3 +43,4 @@ services:
 
 volumes:
   dbdata:
+  keys:

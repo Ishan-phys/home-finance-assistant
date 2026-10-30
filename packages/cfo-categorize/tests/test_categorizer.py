@@ -141,3 +141,12 @@ def test_generative_requests_mask_custom_label_names_and_keys() -> None:
     result = categorize(items(["UPI Tara Nair"]), [label], Spy(), Masker())
     assert "tara" not in (seen["system"] + seen["user"]).lower()
     assert result.mappings["UPI Tara Nair"].label == label.key
+
+
+def test_prompt_sends_refunds_to_the_refunds_category() -> None:
+    from cfo.categorize.categorizer import system_prompt
+    from cfo.categorize.labels import default_labels
+
+    text = system_prompt(default_labels())
+    assert "category named Refunds" in text
+    assert "Income:Refunds: Refunds" in text
