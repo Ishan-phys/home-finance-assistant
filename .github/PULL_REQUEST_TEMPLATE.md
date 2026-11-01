@@ -8,5 +8,5 @@
 - [ ] Tests added or updated, and `uv run pytest` passes
 - [ ] `ruff check`, `ruff format --check`, `mypy` and `tools/check_imports.py` pass
 - [ ] Web changes: `npm run lint`, `npm run typecheck`, `npm run build` pass (and Playwright if the UI changed)
-- [ ] Schema change has an Alembic migration and the README migration table is updated
+- [ ] Schema change has an Alembic migration and `docs/database-migrations.md` is updated
 - [ ] User guide and spec updated if behaviour changed

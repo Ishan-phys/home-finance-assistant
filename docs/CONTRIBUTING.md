@@ -29,7 +29,8 @@ cd web && npm ci && cd ..
 uvx pre-commit install              # optional: runs the lint and secret checks on each commit
 ```
 
-Read the [user guide](user-guide.md) to run and use the app. The product and design documents
+Read the [user guide](user-guide.md) to run and use the app, and [development.md](development.md)
+for the commands and tests. Using an AI coding agent? Point it at [AGENTS.md](../AGENTS.md). The product and design documents
 (PRD, HLD, LLD, TDD) are kept by the maintainers and not published; for a design question, open an
 issue or discussion first and a maintainer will explain the intent.
 
@@ -55,19 +56,20 @@ bash tools/test_isolated.sh          # each extractable package passes on its ow
 uv run pytest                        # unit and integration tests
 
 cd web && npm run lint && npm run typecheck && npm run build
-npx playwright test                  # needs the stack up; EMPTIES THE LOCAL DATABASE
+cd .. && make e2e                    # browser tests on a separate throwaway stack
 ```
 
-`uv run ruff format .` fixes formatting. The browser tests wipe the database in the running stack,
-so do not run them against data you want to keep.
+`uv run ruff format .` fixes formatting. The browser tests empty the database they run against;
+`make e2e` gives them their own stack, so your data is safe. See [development.md](development.md).
 
 ## Making a change
 
 - Open an issue first for anything large, or comment on an existing one.
 - Keep a pull request to one idea. Add or update tests: behaviour without a test will not be merged.
-- Schema changes need an Alembic migration in `packages/cfo-ledger/alembic/versions/` (see the
-  README) and an update to the migration table there.
-- Update the user guide and, if the behaviour is a design decision, the spec.
+- Schema changes need an Alembic migration in `packages/cfo-ledger/alembic/versions/` and a row
+  in [database-migrations.md](database-migrations.md).
+- Update the user guide and the page's "About this page" note and, if the behaviour is a design
+  decision, the spec.
 - Write commit messages that say why, in the imperative ("Add Axis debit card adapter").
 
 ## Adding a bank adapter

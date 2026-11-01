@@ -5,10 +5,10 @@
 COMPOSE ?= docker compose
 
 .DEFAULT_GOAL := help
-.PHONY: help up start build rebuild down stop restart logs ps shell psql backup reset test lint
+.PHONY: help up start build rebuild down stop restart logs ps shell psql backup reset test lint e2e e2e-down
 
 help: ## Show this help
-	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "  %-10s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*## "} /^[a-z0-9-]+:.*## / {printf "  %-10s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 up: ## Start the stack in the background, reusing built images (builds only if missing)
 	$(COMPOSE) up -d
@@ -59,3 +59,12 @@ lint: ## Ruff, format check, strict mypy, import boundaries
 	uv run ruff format --check .
 	uv run mypy packages/*/src api/src tools/check_imports.py
 	uv run python tools/check_imports.py
+
+E2E_ENV = COMPOSE_PROJECT_NAME=cfo-e2e COMPOSE_FILE=docker-compose.yml:docker-compose.e2e.yml
+
+e2e: ## Browser tests on a separate throwaway stack (web on 127.0.0.1:3210); your data is untouched
+	$(E2E_ENV) $(COMPOSE) up -d --build --wait
+	cd web && $(E2E_ENV) E2E_BASE_URL=http://127.0.0.1:3210 npx playwright test
+
+e2e-down: ## Remove the throwaway browser-test stack and its volumes
+	$(E2E_ENV) $(COMPOSE) down -v
