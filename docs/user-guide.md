@@ -68,6 +68,8 @@ restart. `docker compose down -v` deletes it.
 | `DECISIONS_MODEL` | `gpt-6-luna` | The model the Decisions API uses |
 | `DECISIONS_THRESHOLD` | `0.6` | Labels below this confidence stay Uncategorized |
 | `CATEGORIZATION_MODEL` | `claude-haiku-4-5-20251001` | The Claude fallback |
+| `NARRATION_KEY` | generated | Key that encrypts original narrations at rest |
+| `ALLOWED_HOSTS` | local only | Extra host names the API answers to |
 | `CHAT_MODEL` | provider default | The chat model (`claude-sonnet-5-5` or `gpt-5.5`) |
 | `POSTGRES_PASSWORD` | `cfo-local-dev` | Database password (the database is not reachable from outside Docker) |
 
@@ -175,6 +177,16 @@ balance. A transfer it completed goes back to waiting for its other side.
 | **… is short of its statement** | A statement is missing for that period. Upload it |
 | **Card bill … is due** | Shows until a payment to the card appears after the statement date |
 
+### Rules
+
+Open **Rules** to say "if a narration contains this text, put it in this category", for example a
+payee's name for rent. When you choose a category on a transaction, tick **Always do this** to
+make that a rule. Rules run before any guessing, the first match from the top wins, and they never
+change a transaction you set by hand. A rule can also send a row to **Between your accounts**: a
+credit card bill paid from your bank (through CRED, directly or by UPI) is then a transfer, not
+spending, and pairs with the payment on the card's statement. A few starter rules cover common card
+payment wording. Categories also take a few **keywords** (click under the description).
+
 ## 7. The figures
 
 - **Net worth** is everything you own minus everything you owe. Credit card balances and loans
@@ -199,6 +211,8 @@ Before a statement is parsed, a redactor removes personal details: names, addres
 email, PAN, account and card numbers, and UPI handles. Each becomes a stable token such as
 `[PERSON:ab12]`. The same payee always gets the same token, so grouping and de-duplication still
 work. The original file is never kept, and tokens cannot be turned back into the details.
+The one exception is each row's original narration, so you can tell what a row is: it is kept
+encrypted in your database (see below), shown only to you, and never sent to a model.
 
 Amounts, dates, and merchants stay readable. For UPI, IMPS, and NEFT, the other party's name is
 redacted when it looks like a person and kept when it looks like a business.
@@ -213,9 +227,14 @@ Redaction is best-effort. In **Settings**, the privacy section has:
 Your account names, institutions and the names of categories you created are swapped for aliases
 before anything reaches a model, and the assistant's replies are shown with your names put back.
 
+**Original narrations.** Each row's bank text is stored encrypted (`posting_originals`) with a
+key from `NARRATION_KEY`, or one generated into a Docker volume on first run. Back the key up
+with your database: without it the app falls back to the redacted text. Removing a statement
+removes its originals. To keep none, run without a key.
+
 Two things leave your machine: redacted statement lines (and your category descriptions) to the
 categorizer, and figures with aliases to the chat model. Consider asking your provider to enable
-zero data retention. The app has no login; it relies on binding to `127.0.0.1`.
+zero data retention. The app has no login; it relies on binding to `127.0.0.1`, and refuses other hosts and cross-site writes.
 
 ## 9. Asking questions
 

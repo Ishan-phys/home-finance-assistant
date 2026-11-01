@@ -59,6 +59,7 @@ export interface Account {
   binding: string | null;
   manual: boolean;
   description: string | null;
+  keywords: string;
   direction: "in" | "out" | null;
   heading: "regular" | "people" | "rewards";
   retired: boolean;
@@ -113,6 +114,8 @@ export interface Txn {
   id: string;
   date: string;
   narration: string;
+  /** The bank's own text, kept encrypted. Null when none was kept (no key, or an older upload). */
+  original: string | null;
   payee: string;
   source: "import" | "manual" | "system";
   amount: Money;
@@ -154,8 +157,25 @@ export interface InboxItem {
   date: string;
   account: { id: string; name: string } | null;
   transaction_id: string | null;
+  original: string | null;
   text: string;
   action: "categorize" | "upload" | "pair";
+}
+
+export interface RuleItem {
+  id: string;
+  label: string;
+  match_text: string;
+  mode: "contains" | "starts_with";
+  way: "any" | "debit" | "credit";
+  position: number;
+  builtin: boolean;
+  target: { id: string | null; name: string; path: string };
+}
+
+export interface RuleSuggestion {
+  match_text: string;
+  way: "debit" | "credit";
 }
 
 export interface SafeToSpend {

@@ -304,6 +304,18 @@ class MappingRepository(ScopedRepository):
             )
             self.s.execute(stmt)
 
+    def list_owner(self) -> list[MerchantMapping]:
+        """Every mapping the owner made, oldest change first."""
+        rows = self.s.scalars(
+            select(MerchantMappingRow)
+            .where(
+                self.in_scope(MerchantMappingRow.ledger_id),
+                MerchantMappingRow.source == MappingSource.OWNER.value,
+            )
+            .order_by(MerchantMappingRow.updated_at, MerchantMappingRow.id)
+        )
+        return [_mapping(r) for r in rows]
+
     def set_owner(self, lookup_key: str, label: str, clean_merchant: str) -> MerchantMapping:
         stmt = insert(MerchantMappingRow).values(
             id=new_id(),

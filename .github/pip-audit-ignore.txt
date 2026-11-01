@@ -23,4 +23,6 @@ PYSEC-2026-391  # litellm
 PYSEC-2026-4066  # litellm
 PYSEC-2026-4067  # litellm
 PYSEC-2026-4070  # litellm
+GHSA-hhww-mrg2-969h  # litellm (/sso/debug/callback, proxy only)
+GHSA-g5ff-637f-6q2m  # litellm (/utils/transform_request, proxy only)
 CVE-2026-114603  # opentelemetry-api
