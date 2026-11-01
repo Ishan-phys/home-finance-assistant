@@ -29,10 +29,10 @@ cd web && npm ci && cd ..
 uvx pre-commit install              # optional: runs the lint and secret checks on each commit
 ```
 
-Read the [user guide](user-guide.md) to run and use the app, and [development.md](development.md)
-for the commands and tests. Using an AI coding agent? Point it at [AGENTS.md](../AGENTS.md). The product and design documents
-(PRD, HLD, LLD, TDD) are kept by the maintainers and not published; for a design question, open an
-issue or discussion first and a maintainer will explain the intent.
+Read the [user guide](user-guide.md) to run and use the app, [development.md](development.md) for
+the commands and tests, and [architecture.md](architecture.md) for how the pieces fit. Using an AI
+coding agent? Point it at [AGENTS.md](../AGENTS.md). For a design question, open an issue or
+discussion first.
 
 ## Dependency security
 
@@ -68,8 +68,8 @@ cd .. && make e2e                    # browser tests on a separate throwaway sta
 - Keep a pull request to one idea. Add or update tests: behaviour without a test will not be merged.
 - Schema changes need an Alembic migration in `packages/cfo-ledger/alembic/versions/` and a row
   in [database-migrations.md](database-migrations.md).
-- Update the user guide and the page's "About this page" note and, if the behaviour is a design
-  decision, the spec.
+- Update the user guide and the page's "About this page" note. If the change alters the packages
+  or the rules they follow, update [architecture.md](architecture.md) too.
 - Write commit messages that say why, in the imperative ("Add Axis debit card adapter").
 
 ## Adding a bank adapter
