@@ -13,7 +13,7 @@ function monthName(month: string): string {
   return new Date(`${month}-01T00:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
 }
 
-/** Four things only: what I am worth, this month, what I can spend, and what needs me. */
+/** Four things only: what I am worth, the latest month, what I can spend, and what needs me. */
 export function OverviewPage() {
   const { version } = usePerson();
   const view = useApi<Overview>("/reports/overview", version);
@@ -28,6 +28,16 @@ export function OverviewPage() {
     <div>
       <PageHeader
         title="Overview"
+        about={{
+          id: "overview",
+          summary: "Your money at a glance: four cards that answer what you are worth, how the latest month went, what you can spend, and what needs you.",
+          points: [
+            "Net worth is what you own less what you owe. Click Breakdown to see every account.",
+            "Money in and out shows the latest month with statements: net in, net out and what you saved. Click the month name for the full picture on Spending.",
+            "Safe to spend is cash you can use without touching your base amount or the card bills you owe.",
+            "The Inbox lists things to fix, such as a transaction with no category. Aim for an empty list.",
+          ],
+        }}
         action={
           firstFeed ? (
             <Button render={<Link href={`/accounts/${firstFeed.id}?upload=1`} />}>Upload statement</Button>
@@ -43,12 +53,12 @@ export function OverviewPage() {
           <p className="mt-2 text-xs text-muted-foreground">What you own, less what you owe on cards and loans.</p>
         </Panel>
 
-        <Panel title="This month" action={<Link href="/spending" className="text-xs text-muted-foreground hover:underline">{monthName(this_month.month)}</Link>}>
+        <Panel title="Money in and out" action={<Link href="/spending" className="text-xs text-muted-foreground hover:underline">{monthName(this_month.month)}</Link>}>
           <dl className="space-y-1.5 text-sm">
             {(
               [
-                ["Earned", this_month.earned],
-                ["Spent", this_month.spent],
+                ["Net in", this_month.net_in],
+                ["Net out", this_month.net_out],
                 ["Saved", this_month.saved],
               ] as const
             ).map(([label, value]) => (

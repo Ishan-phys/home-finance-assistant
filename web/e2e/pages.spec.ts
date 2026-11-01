@@ -15,7 +15,7 @@ test.beforeEach(async ({ request }) => {
 test("overview shows exactly four things, with the sample's net worth", async ({ page }) => {
   await page.goto("/");
   const main = page.getByRole("main");
-  for (const name of ["Net worth", "This month", "Safe to spend", "Inbox"]) {
+  for (const name of ["Net worth", "Money in and out", "Safe to spend", "Inbox"]) {
     await expect(main.getByRole("region", { name })).toBeVisible();
   }
   await expect(main.getByRole("region")).toHaveCount(4);
@@ -28,7 +28,9 @@ test("spending shows the month, its categories and the check line", async ({ pag
   await page.goto("/spending?month=2026-09");
   await expect(page.getByRole("heading", { name: "Spending", exact: true })).toBeVisible();
   await expect(page.getByText("September 2026")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Spent" })).toContainText(inr(expected.spent));
+  await expect(page.getByRole("region", { name: "Net in" })).toContainText(inr(expected.net_in));
+  await expect(page.getByRole("region", { name: "Net out" })).toContainText(inr(expected.net_out));
+  await expect(page.getByRole("region", { name: "Saved" })).toContainText(inr(expected.saved));
   await expect(page.getByText(/Net worth changed by .* ✓/)).toBeVisible();
   await page.getByRole("link", { name: /Housing/ }).click();
   await expect(page).toHaveURL(/\/transactions\?category_id=/);
@@ -94,4 +96,24 @@ test("Ask opens the assistant beside the page", async ({ page }) => {
   await expect(page.getByRole("region", { name: "Net worth" })).toBeVisible();
   await panel.getByRole("button", { name: "Close assistant" }).click();
   await expect(panel).toBeHidden();
+});
+
+test("every page explains itself, and a closed note stays closed", async ({ page }) => {
+  for (const path of ["/", "/spending", "/transactions", "/inbox", "/accounts", "/categories", "/rules", "/settings"]) {
+    await page.goto(path);
+    await expect(page.getByText("About this page")).toBeVisible();
+  }
+  await page.goto("/spending");
+  const note = page.locator("details", { hasText: "About this page" });
+  await expect(note).toHaveJSProperty("open", true);
+  await page.getByText("About this page").click();
+  await expect(note).toHaveJSProperty("open", false);
+  await page.reload();
+  await expect(page.getByText("About this page")).toBeVisible();
+  await expect(note).toHaveJSProperty("open", false);
+  await page.getByText("About this page").click();
+  await expect(note).toHaveJSProperty("open", true);
+  // other pages keep their own note open
+  await page.goto("/rules");
+  await expect(page.locator("details", { hasText: "About this page" })).toHaveJSProperty("open", true);
 });

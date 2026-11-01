@@ -241,6 +241,8 @@ def income_statement_report(data: Data, month: str | None = None) -> Json:
         "end": end,
         "earned": money(stmt.earned),
         "spent": money(stmt.spent),
+        "net_in": money(stmt.net_in),
+        "net_out": money(stmt.net_out),
         "saved": money(stmt.saved),
         "rewards": money(stmt.rewards),
         "people_in": money(stmt.people_in),
@@ -393,7 +395,7 @@ def overview_report(data: Data) -> Json:
     now = _sheet(data, data.today)
     last_month_end = month_bounds(previous_month(month_key(data.today)))[1]
     before = _sheet(data, last_month_end)
-    month = month_key(data.today)
+    month = default_month(data)
     start, end = month_bounds(month)
     stmt = income_statement(data.accounts, data.transactions, start, end)
     items = inbox_report(data)
@@ -405,8 +407,8 @@ def overview_report(data: Data) -> Json:
         },
         "this_month": {
             "month": month,
-            "earned": money(stmt.earned),
-            "spent": money(stmt.spent),
+            "net_in": money(stmt.net_in),
+            "net_out": money(stmt.net_out),
             "saved": money(stmt.saved),
         },
         "safe_to_spend": safe_to_spend_report(data),
@@ -550,24 +552,19 @@ def account_report(data: Data, account_id: Id) -> Json:
 
 @json_safe
 def accounts_tree_report(data: Data) -> Json:
-    """Every account in real accounting terms: balance-sheet accounts all time, income and
-    expense accounts this month."""
-    start, end = month_bounds(month_key(data.today))
+    """Every account in real accounting terms, each totalled over all time up to today."""
     all_time = balances_at(data.transactions, data.today)
-    month_tx = [t for t in data.transactions if start <= t.date <= end]
-    this_month = balances_at(month_tx)
     kinds = []
     for kind in AccountKind:
-        source = this_month if kind in (AccountKind.INCOME, AccountKind.EXPENSE) else all_time
         totals: dict[str, int] = defaultdict(int)
         ids: dict[str, Id] = {}
         for a in data.accounts:
-            if a.kind is not kind or (not a.active and source.get(a.id, 0) == 0):
+            if a.kind is not kind or (not a.active and all_time.get(a.id, 0) == 0):
                 continue
             parts = a.path.split(":")
             ids[a.path] = a.id
             for i in range(1, len(parts) + 1):
-                totals[":".join(parts[:i])] += source.get(a.id, 0)
+                totals[":".join(parts[:i])] += all_time.get(a.id, 0)
         nodes: dict[str, Json] = {}
         root: Json = {}
         for path in sorted(totals):

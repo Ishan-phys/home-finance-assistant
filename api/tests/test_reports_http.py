@@ -45,7 +45,11 @@ def test_reports_respond_with_plain_json(api: Any) -> None:
     assert month["check"]["ok"] is True and month["earned"]["paise"] == 15000000
     assert api.get("/reports/safe-to-spend").json()["amount"]["paise"] == 19245550
     assert api.get("/reports/leaks", params={"month": "2026-09"}).status_code == 200
-    assert api.get("/accounts/tree").json()["kinds"][0]["label"] == "Assets"
+    tree = api.get("/accounts/tree").json()
+    assert tree["kinds"][0]["label"] == "Assets"
+    # income and spending are totalled over all time, so older statements are not zero
+    totals = {k["kind"]: k["total"]["paise"] for k in tree["kinds"]}
+    assert totals["income"] != 0 and totals["expense"] != 0
     bad = api.get("/reports/income-statement", params={"month": "Sept"})
     assert bad.status_code == 422
 
