@@ -28,9 +28,20 @@ We aim to acknowledge a report within a week and to say how we will handle it so
 - **Models see redacted text only**, but they do see merchants, amounts and dates. If you enable
   OpenAI's Decisions API or Anthropic's API, those providers receive that redacted text. Check
   your account's data-retention settings.
-- **The app is a single-user local tool.** There is no login. It binds to `127.0.0.1`; do not
-  expose it to a network.
-- **The database is not encrypted at rest** by the app. Use full-disk encryption.
+- **The app is a single-household local tool.** There is no login, and anyone who can reach the
+  API can read and change everything. It binds to `127.0.0.1` and refuses requests whose `Host` or
+  browser `Origin` is not this machine or the web service (`ALLOWED_HOSTS` extends the list). Do
+  not expose it to a network, a tunnel or a shared host without adding authentication first.
+- **Original narrations are encrypted, the rest of the database is not.** The unredacted bank text
+  is sealed with a key (`NARRATION_KEY`, or a generated file in a Docker volume), so a leaked
+  database dump shows ciphertext. Anyone with access to the host can read both the key and the
+  database, so use full-disk encryption. `make backup` covers the database only: back the key up
+  with it, because a lost key falls back to the redacted text.
+- **Uploads are capped** at 10 MiB and 20,000 rows, and the file type is checked from its bytes.
+  The expanded size of an `.xlsx` is not limited.
+- **Statement text is untrusted input to the model.** The categorizer accepts only a category it
+  offered for that line, and the chat tools are read-only, so the worst outcome is a wrong
+  category.
 - **Statement passwords** are used in memory to open a file and are never stored or logged.
 - **Back up before upgrading**: migration `0006` is one-way.
 
@@ -38,3 +49,9 @@ We aim to acknowledge a report within a week and to say how we will handle it so
 
 API keys go in `.env`, which is gitignored. Never commit one. If you do by mistake, revoke it at
 the provider first, then remove it from history.
+
+## Dependencies
+
+Dependency review blocks a pull request that adds a package with a known advisory, and a weekly
+audit checks what is already locked. Advisories that do not apply here are listed with their
+reasons in `.github/pip-audit-ignore.txt`.

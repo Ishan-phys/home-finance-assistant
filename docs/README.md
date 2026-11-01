@@ -15,9 +15,3 @@
 - [Database migrations](database-migrations.md): every revision and how to apply one
 - [Contributing](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md)
 - [AGENTS.md](../AGENTS.md): instructions for AI coding agents working in this repo
-
-## Records
-
-- [Security audit, 2026-10-30](security/2026-10-30-audit.md)
-- Design specs and implementation plans: [`superpowers/specs/`](superpowers/specs/) and
-  [`superpowers/plans/`](superpowers/plans/)
