@@ -244,3 +244,14 @@ def test_concurrent_uploads_serialize(database: Database) -> None:
     a.start(), time.sleep(0.05), b.start()
     a.join(), b.join()
     assert order == ["a-in", "a-out", "b-in", "b-out"]
+
+
+def test_a_database_error_does_not_carry_the_values_that_caused_it(database) -> None:  # type: ignore[no-untyped-def]
+    import pytest
+    from sqlalchemy import text
+    from sqlalchemy.exc import DBAPIError
+
+    with pytest.raises(DBAPIError) as caught:
+        with database.transaction() as s:
+            s.execute(text("SELECT 1 / :zero, :secret"), {"zero": 0, "secret": "UPI-VIKRAM-KAPOOR"})
+    assert "VIKRAM" not in str(caught.value)

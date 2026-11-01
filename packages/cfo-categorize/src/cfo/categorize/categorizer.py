@@ -14,6 +14,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Protocol
 
+from cfo.categorize.examples import Example, mask_examples, pick_examples, render_examples
 from cfo.categorize.labels import OWN_MOVE_LABEL, Label, NarrationMasker, labels_for, mask_labels
 from cfo.core.types import MappingSource, MerchantMapping
 
@@ -23,8 +24,8 @@ SYSTEM_PROMPT = (
     "You categorize Indian bank and credit card statement narrations. "
     "For each numbered narration, marked (debit) for money out or (credit) for money in, return "
     "a cleaned merchant name (the business, without reference numbers, UPI handles, or card "
-    "digits) and exactly one category key from the list below. A merchant refund is a credit to "
-    "that merchant's own category. Money between the person's own accounts, a credit card bill "
+    "digits) and exactly one category key from the list below. A refund or reversal of a purchase is a "
+    "credit: give it the category named Refunds when the list has one. Money between the person's own accounts, a credit card bill "
     "payment, and investments take the key {own}. If none fits, leave the line out by omitting "
     "its id. Reply with JSON only, in this shape: "
     '{{"items": [{{"id": 1, "merchant": "Swiggy", "category": "Expenses:Food:Dining"}}]}}. '
@@ -121,10 +122,10 @@ def _parse(
     return out
 
 
-def system_prompt(labels: Sequence[Label]) -> str:
+def system_prompt(labels: Sequence[Label], examples: Sequence[Example] = ()) -> str:
     lines = "\n".join(f"{x.key}: {x.name} — {x.description}" for x in labels)
     own = next((x.key for x in labels if x.direction == "any"), OWN_MOVE_LABEL.key)
-    return SYSTEM_PROMPT.format(own=own, labels=lines)
+    return SYSTEM_PROMPT.format(own=own, labels=lines) + render_examples(examples)
 
 
 def categorize(
@@ -132,6 +133,7 @@ def categorize(
     labels: Sequence[Label],
     client: ModelClient,
     masker: NarrationMasker | None = None,
+    examples: Sequence[Example] = (),
 ) -> CategorizationResult:
     """Categorize distinct descriptions, at most 50 per request.
 
@@ -140,7 +142,8 @@ def categorize(
     distinct = list({i.description: i for i in items if i.description}.values())
     sent, keys = mask_labels(labels, masker)
     to_sent = {path: key for key, path in keys.items()}
-    prompt = system_prompt(sent)
+    shown = mask_examples(pick_examples(examples, distinct), masker, to_sent)
+    prompt = system_prompt(sent, shown)
     mappings: dict[str, MerchantMapping] = {}
     warnings: list[str] = []
     for batch in _batches(distinct):
@@ -177,5 +180,7 @@ class GenerativeCategorizer:
         self.client = client
         self.masker = masker
 
-    def categorize(self, items: Sequence[Item], labels: Sequence[Label]) -> CategorizationResult:
-        return categorize(items, labels, self.client, self.masker)
+    def categorize(
+        self, items: Sequence[Item], labels: Sequence[Label], examples: Sequence[Example] = ()
+    ) -> CategorizationResult:
+        return categorize(items, labels, self.client, self.masker, examples)

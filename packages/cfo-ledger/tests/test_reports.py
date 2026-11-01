@@ -116,10 +116,15 @@ def test_overview_numbers_agree_with_balance_sheet_and_statement(database: Datab
         == sheet["net_worth"]
         == {"paise": 23373200 - 30000, "formatted": "₹2,33,432.00"}
     )
-    assert overview["this_month"]["month"] == "2026-10"
+    # nothing was imported for October yet, so the overview shows September, like Spending
+    assert overview["this_month"]["month"] == "2026-09"
     assert month["earned"]["paise"] == 15000000
     assert month["spent"]["paise"] == 64000 + 30000 + 120000
     assert month["people_out"]["paise"] == 200000
+    assert month["net_in"]["paise"] == 15000000
+    assert month["net_out"]["paise"] == 64000 + 30000 + 120000 + 200000
+    assert overview["this_month"]["net_out"] == month["net_out"]
+    assert overview["this_month"]["saved"] == month["saved"]
     assert overview["safe_to_spend"]["amount"]["paise"] == 23373200 - 5000000 - 30000
     json.dumps(overview), json.dumps(sheet), json.dumps(month)  # plain JSON
 

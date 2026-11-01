@@ -51,6 +51,8 @@ def test_people_and_rewards_are_separate_bands() -> None:
     assert (s.earned, s.spent) == (0, 0)
     assert (s.people_out, s.people_in, s.rewards) == (200000, 50000, 10000)
     assert s.saved == 50000 + 10000 - 200000
+    assert (s.net_in, s.net_out) == (50000 + 10000, 200000)
+    assert s.saved == s.net_in - s.net_out
 
 
 def test_categories_roll_up_by_path() -> None:

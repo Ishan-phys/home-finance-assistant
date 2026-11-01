@@ -1,123 +1,127 @@
-# AI CFO
+<h1 align="center">AI CFO</h1>
 
-**New here? Start with the [setup and user guide](docs/user-guide.md).**
+<p align="center">
+  <strong>A private, local-first personal finance ledger with an assistant that explains your money.</strong><br />
+  Upload your bank statements. Get double-entry books, figures that always agree, and answers in plain words.
+</p>
 
-A local personal finance ledger and assistant, kept as double-entry books. You set up your
-accounts, statements go in, Python computes every figure, and one agent explains them. See the [user guide](docs/user-guide.md) for how to run and use it.
+<p align="center">
+  <a href="https://github.com/Ishan-phys/home-finance-assistant/actions/workflows/ci.yml"><img src="https://github.com/Ishan-phys/home-finance-assistant/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/Ishan-phys/home-finance-assistant/actions/workflows/codeql.yml"><img src="https://github.com/Ishan-phys/home-finance-assistant/actions/workflows/codeql.yml/badge.svg" alt="CodeQL" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
+  <img src="https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white" alt="Python 3.13" />
+  <img src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white" alt="Next.js 16" />
+  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 16" />
+</p>
 
-- **Local first.** Your data lives in a PostgreSQL database on your machine. The app binds to
+<p align="center">
+  <a href="docs/user-guide.md">User guide</a> ·
+  <a href="docs/architecture.md">Architecture</a> ·
+  <a href="docs/development.md">Development</a> ·
+  <a href="docs/CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">
+  <img src="docs/images/overview.png" alt="The Overview page: net worth, money in and out for the month, safe to spend, and the inbox" width="900" />
+</p>
+
+> Every name, account and amount in these screenshots comes from the built-in synthetic sample.
+
+## Why
+
+Most finance apps either want your bank login or ask you to trust a model with your numbers. AI CFO
+does neither. It runs on your machine, reads the statements you download, and keeps proper
+double-entry books, so net worth, spending and savings are computed by tested code and always add
+up. The model only sorts transactions into categories and explains the figures, and it never sees
+your name, account numbers or phone number.
+
+## Features
+
+- **Double-entry books.** Every transaction moves money between two accounts and sums to zero, and
+  the database enforces it. Card bill payments and moves between your own accounts pair up as
+  transfers, never as spending.
+- **Figures that agree.** Net worth, net in and net out, savings and safe to spend come from one set
+  of books. Each month carries a check line proving that the change in net worth equals what you
+  saved.
+- **Private by design.** Personal details are redacted from every statement *before* anything is
+  stored or sent to a model. Original narrations are encrypted at rest. The app listens on
   `127.0.0.1` only.
-- **Private by design.** Names, phone numbers, account numbers and other personal details are
-  removed from every statement *before* it is stored or sent to any model. Redaction is best-effort;
-  read [SECURITY.md](docs/SECURITY.md) and section 8 of the [user guide](docs/user-guide.md) before use.
-- **Numbers come from code, and they agree.** Every transaction moves money between two accounts
-  and adds up to zero, so net worth, the month's earned and spent, and safe-to-spend are computed
-  from one set of books by tested Python. The chat agent only explains them.
-- **Indian banks first.** Adapters exist for HDFC, SBI, Axis cards and Groww; adding a bank is a
-  small, well-bounded contribution (see [CONTRIBUTING.md](docs/CONTRIBUTING.md)).
+- **Categorization you control.** Your own rules come first ("if the narration contains this, use
+  that category"), then your past choices, then the model. Tick **Always do this** on any
+  transaction to make a rule.
+- **An assistant that cannot make numbers up.** Ask "how much can I safely spend this month?" It
+  answers with figures looked up by tools over your ledger, never invented by the model.
+- **Explains itself.** Every page opens with a short note on what it shows and what you can do
+  there.
+- **Indian banks first.** HDFC (account and credit card), SBI, Axis credit card and Groww (mutual
+  funds and stocks), in XLS, XLSX, CSV and PDF. Adding a bank is a small, well-bounded change.
+
+<table>
+  <tr>
+    <td><img src="docs/images/spending.png" alt="Spending: net in, net out and saved, with a category breakdown" /></td>
+    <td><img src="docs/images/transactions.png" alt="Transactions: each row reads from one account to another" /></td>
+  </tr>
+  <tr>
+    <td align="center">Spending: where the month's money came from and went</td>
+    <td align="center">Transactions: every row reads From → To</td>
+  </tr>
+</table>
+
+## Quick start
+
+You need [Docker](https://docs.docker.com/get-docker/).
+
+```sh
+git clone https://github.com/Ishan-phys/home-finance-assistant.git
+cd home-finance-assistant
+cp .env.example .env   # then, optionally, set ANTHROPIC_API_KEY or OPENAI_API_KEY in it
+make up                # web on http://127.0.0.1:3000, API on http://127.0.0.1:8000
+```
+
+Open http://127.0.0.1:3000. The app asks your name, walks you through adding your accounts and
+categories, then you upload statements. Without a model key, everything works except chat and
+automatic categorization.
+
+The [user guide](docs/user-guide.md) covers settings, upgrades, privacy and troubleshooting.
+
+## How it works
+
+```mermaid
+flowchart LR
+    s["Statement<br/>XLS · CSV · PDF"] --> r["Redact<br/>personal details"] --> p["Parse<br/>per-bank adapter"]
+    p --> c["Categorize<br/>rules → past choices → model"] --> j["Journal<br/>balanced, paired, checked"]
+    j --> m["Metrics<br/>pure Python"] --> ui["Cockpit<br/>and assistant"]
+```
+
+A Python `uv` workspace of small packages with enforced import boundaries, a FastAPI service, a
+Next.js cockpit, and PostgreSQL, all in Docker Compose. Read the [architecture](docs/architecture.md)
+for the packages and the rules that hold them together.
+
+| Layer | Built with |
+| --- | --- |
+| Web | Next.js 16, React 19, Tailwind CSS 4, shadcn/ui |
+| API | FastAPI, Python 3.13 |
+| Ledger | PostgreSQL 16, SQLAlchemy 2, Alembic |
+| Assistant | Google ADK over LiteLLM, with Claude or OpenAI |
+| Quality | pytest with testcontainers, Playwright, Ruff, strict mypy, CodeQL, gitleaks |
+
+## Documentation
+
+| | |
+| --- | --- |
+| [User guide](docs/user-guide.md) | Install, set up, upload statements, read the figures |
+| [Development](docs/development.md) | Commands, tests and test data |
+| [Architecture](docs/architecture.md) | Packages, a statement's journey, design rules |
+| [HTTP API](docs/api.md) | Routes, amounts and errors |
+| [Database migrations](docs/database-migrations.md) | Every revision and how to apply one |
+| [Security](docs/SECURITY.md) | What is protected, the limits, and reporting |
 
 ## Contributing
 
-Contributions are welcome: bank adapters, redaction improvements, metrics, UI and docs. Read
+Contributions are welcome, especially bank adapters and redaction improvements. Read
 [CONTRIBUTING.md](docs/CONTRIBUTING.md) first. **Never commit real statements or personal data.**
-
-## Run it
-
-```sh
-cp .env.example .env      # add OPENAI_API_KEY or ANTHROPIC_API_KEY (either one runs both chat and categorization)
-make up                   # (docker compose up -d) web on 127.0.0.1:3000, API on 127.0.0.1:8000
-```
-
-The API container applies database migrations on start. PostgreSQL publishes no host port.
-
-On first run the app asks your name, then walks you through setup: your accounts (type,
-institution, name) and your categories (each with a line on what it is for). Then you upload
-statements into the accounts. Personal details are removed from every statement before anything
-is stored or sent to a model.
-
-## Database migrations
-
-Schema changes live in `packages/cfo-ledger/alembic/versions/` and are applied in order:
-
-| Revision | Change |
-| --- | --- |
-| `0001` | Initial schema: accounts, valuations, transactions, transfer links, merchant mappings, obligation and income rules and instances, imports, settings |
-| `0002` | Adds the `Cashback` category |
-| `0003` | Owner redaction terms |
-| `0004` | Pseudonym salt, account fingerprint, redaction summary, token labels |
-| `0005` | The model's confidence on merchant mappings |
-| `0006` | People, ledgers, households, and UUIDv7 ids. **One-way**: it keeps existing data (attached to a person named "Owner") but cannot be reversed, so back up first |
-| `0007` | Events and `transactions.event_id`; the categories Travel, Received from others, Sent to others, Own transfer |
-| `0008` | Spending plans, and the statement each balance came from |
-| `0009` | Double-entry books: the account tree (real accounts, categories, system accounts), transactions of postings, balance assertions, valuations, setup state. **One-way and not converting**: earlier ledger data is dropped and statements are re-uploaded, so back up first |
-| `0010` | Records every row each statement contained, so removing a statement keeps rows another statement also holds |
-
-Reproduce the schema on any machine:
-
-```sh
-# with Compose: nothing to do, the api service runs `alembic upgrade head`
-
-# or against any PostgreSQL 16 database
-cd packages/cfo-ledger
-uv sync
-export DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DBNAME
-uv run alembic upgrade head          # apply everything
-uv run alembic current               # show the applied revision
-uv run alembic downgrade -1          # step back one revision
-uv run alembic upgrade head --sql    # print the SQL instead of running it
-```
-
-Adding a migration: change `packages/cfo-ledger/src/cfo/ledger/repositories/models.py`, run
-`uv run alembic revision --autogenerate -m "what changed" --rev-id 000N`, review the file,
-and commit it with the model change. The integration tests apply every migration to a
-throwaway database, and one test walks them up and down.
-
-## Develop
-
-```sh
-uv sync                  # one workspace, Python 3.13
-uv run pytest            # starts a throwaway PostgreSQL via Docker (testcontainers)
-uv run ruff check . && uv run mypy packages/*/src api/src tools/check_imports.py
-uv run python tools/check_imports.py   # package boundaries
-
-# faster: reuse a running server
-CFO_TEST_DATABASE_URL=postgresql+psycopg://cfo:dev@127.0.0.1:55432/cfo uv run pytest
-```
-
-`fixtures/build_fixtures.py` regenerates the synthetic statement fixtures. Real statements
-belong in `statements/`, which is gitignored.
-
-## Tests and acceptance
-
-| What | How |
-| --- | --- |
-| Unit and integration (PostgreSQL), including the hand-derived expected results for the sample ledger | `uv run pytest` |
-| Browser tests against the running stack (they empty the database first) | `docker compose up -d --build`, then `cd web && npx playwright install chromium && npx playwright test` |
-| Ports: PostgreSQL has no host port, web and API listen on 127.0.0.1 only | `./scripts/check-ports.sh` |
-
-The acceptance run seeds merchant mappings from `fixtures/merchant_mappings.json`, so its
-figures never depend on a live model. `fixtures/expected_results.json` was derived by hand
-from the fixtures. Chat needs `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in `.env`; without it the dock reports that
-the assistant is unavailable and everything else works.
-
-## Layout
-
-A `uv` workspace of small packages under `packages/`, plus the app in `api/` and the cockpit in
-`web/`. Each package declares what it may depend on, and `tools/check_imports.py` enforces it in CI.
-
-| Package | Role |
-| --- | --- |
-| `cfo-core` | money, dates, domain records |
-| `cfo-doc` | the neutral document form every statement is read into |
-| `cfo-redact` | personal-detail redaction and prompt masking |
-| `cfo-parse` | unlocking, readers, and per-bank adapters |
-| `cfo-categorize` | the System-1 categorizer |
-| `cfo-metrics` | pure functions over postings: balance sheet, income statement, reconciliation, safe-to-spend, inbox |
-| `cfo-ledger` | schema, migrations, repositories, setup and journal services, reports |
-| `cfo-ingest` | the ingestion pipeline |
-| `cfo-agent` | the chat agent and its tools |
-| `cfo-api` (`api/`) | the FastAPI app |
+AI coding agents should start with [AGENTS.md](AGENTS.md).
 
 ## License
 
-[MIT](LICENSE).
+[MIT](LICENSE) © Ishan Srivastava

@@ -17,7 +17,13 @@ UPLOAD_LOCK_KEY = int.from_bytes(hashlib.sha256(b"cfo:upload").digest()[:8], "bi
 
 class Database:
     def __init__(self, url: str) -> None:
-        self.engine: Engine = create_engine(url, pool_pre_ping=True)
+        self.engine: Engine = create_engine(
+            url,
+            pool_pre_ping=True,
+            # A failed statement's message would otherwise carry its bound values, which are
+            # narrations and amounts, into logs.
+            hide_parameters=True,
+        )
         # Used when a transaction names no scope. The application never sets it: every request
         # names its person's ledger. Tests set it to their own ledger.
         self.default_scope: Scope | None = None

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, BookOpen, Inbox, LayoutDashboard, PieChart, Plus, Settings, Sparkles, Tags } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Inbox, LayoutDashboard, ListFilter, PieChart, Plus, Settings, Sparkles, Tags } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -109,6 +109,7 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
           All accounts
         </NavLink>
         <NavLink href="/categories" icon={<Tags />}>Categories</NavLink>
+        <NavLink href="/rules" icon={<ListFilter />}>Rules</NavLink>
         <NavLink href="/settings" icon={<Settings />}>Settings</NavLink>
         <button
           type="button"

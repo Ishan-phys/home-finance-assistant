@@ -51,7 +51,19 @@ export function TransactionsPage() {
 
   return (
     <div>
-      <PageHeader title="Transactions" subtitle="Everything that happened, newest first. Open a row to see its bookkeeping." />
+      <PageHeader
+        title="Transactions"
+        subtitle="Everything that happened, newest first. Open a row to see its bookkeeping."
+        about={{
+          id: "transactions",
+          summary: "Every transaction from every statement you uploaded, in one list.",
+          points: [
+            "Search by description, or filter by account or category. Clicking a category on Spending brings you here filtered to that month.",
+            "Open a row to see where the money moved from and to, and to change its category.",
+            "Pick a category and tick “Always do this” to create a rule that sorts similar transactions for you.",
+          ],
+        }}
+      />
       <div className="mb-4 flex flex-wrap gap-2">
         <Input ref={search} className="w-64" placeholder="Search (press /)" aria-label="Search" value={q} onChange={(e) => setQ(e.target.value)} />
         <NativeSelect aria-label="Account" value={account} onChange={(e) => setFilter("account_id", e.target.value)}>
