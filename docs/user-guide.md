@@ -68,6 +68,8 @@ restart. `docker compose down -v` deletes it.
 | `DECISIONS_MODEL` | `gpt-6-luna` | The model the Decisions API uses |
 | `DECISIONS_THRESHOLD` | `0.6` | Labels below this confidence stay Uncategorized |
 | `CATEGORIZATION_MODEL` | `claude-haiku-4-5-20251001` | The Claude fallback |
+| `NARRATION_KEY` | generated | Key that encrypts original narrations at rest |
+| `ALLOWED_HOSTS` | local only | Extra host names the API answers to |
 | `CHAT_MODEL` | provider default | The chat model (`claude-sonnet-5-5` or `gpt-5.5`) |
 | `POSTGRES_PASSWORD` | `cfo-local-dev` | Database password (the database is not reachable from outside Docker) |
 
@@ -119,17 +121,21 @@ The sidebar is always on the left:
 
 | Item | What it is for |
 | --- | --- |
-| **Overview** | Four things: net worth, this month (earned, spent, saved), safe to spend, and the top of the Inbox |
+| **Overview** | Four things: net worth, money in and out for the latest month (net in, net out, saved), safe to spend, and the top of the Inbox |
 | **Inbox** | Everything that needs you, each with its fix. The number beside it is how many |
-| **Spending** | One month: what you earned, spent and saved, where it went by category, and spending that grew |
+| **Spending** | One month: net in, net out and saved, where it went by category, and spending that grew |
 | **Transactions** | Everything that happened, searchable (press `/`), filterable by account and category |
 | **Accounts** | Your accounts grouped as cash and savings, investments, deposits, other assets, and what you owe, with balances. Click one to open it |
-| **All accounts** | The books in accounting terms: Assets, Liabilities, Income, Expenses and Equity |
+| **All accounts** | The books in accounting terms: Assets, Liabilities, Income, Expenses and Equity, each totalled over all time |
 | **Categories** | Rename, describe, add, merge, retire or delete categories |
+| **Rules** | "If the narration contains this text, use this category", checked from the top |
 | **Settings** | Safe-to-spend settings, privacy, and starting over |
 | **Ask** | Opens the assistant on the right, beside the page |
 
 On a phone the sidebar opens from the menu button at the top.
+
+Every page starts with an **About this page** note that says what the page shows and what you can
+do there. Click its title to close it; it stays closed on that page until you open it again.
 
 ## 5. Statements
 
@@ -175,12 +181,26 @@ balance. A transfer it completed goes back to waiting for its other side.
 | **… is short of its statement** | A statement is missing for that period. Upload it |
 | **Card bill … is due** | Shows until a payment to the card appears after the statement date |
 
+### Rules
+
+Open **Rules** to say "if a narration contains this text, put it in this category", for example a
+payee's name for rent. When you choose a category on a transaction, tick **Always do this** to
+make that a rule. Rules run before any guessing, the first match from the top wins, and they never
+change a transaction you set by hand. A rule can also send a row to **Between your accounts**: a
+credit card bill paid from your bank (through CRED, directly or by UPI) is then a transfer, not
+spending, and pairs with the payment on the card's statement. A few starter rules cover common card
+payment wording. Categories also take a few **keywords** (click under the description).
+
 ## 7. The figures
 
 - **Net worth** is everything you own minus everything you owe. Credit card balances and loans
   reduce it. Investments count at their latest market value.
-- **Earned, spent, saved** cover one month. Money to and from friends and family, and cashback, are
-  shown on their own lines rather than counted as salary or lifestyle spending.
+- **Net in, net out, saved** cover one month. Net in is income plus cashback and money people sent
+  you; net out is spending plus money you sent to people; saved is the difference. Moving money
+  between your own accounts is neither. Under **Where it went**, money to and from people and
+  cashback are listed on their own lines rather than as categories.
+- **The month shown** is the current month once it has statements, otherwise the latest month that
+  does, so the Overview and Spending never show an empty month while last month's figures exist.
 - **The check line** on Spending reads "Net worth changed by … : saved … ✓". It proves the month's
   figures agree with the change in what you own; revaluations and opening balances are listed when
   they play a part.
@@ -199,6 +219,8 @@ Before a statement is parsed, a redactor removes personal details: names, addres
 email, PAN, account and card numbers, and UPI handles. Each becomes a stable token such as
 `[PERSON:ab12]`. The same payee always gets the same token, so grouping and de-duplication still
 work. The original file is never kept, and tokens cannot be turned back into the details.
+The one exception is each row's original narration, so you can tell what a row is: it is kept
+encrypted in your database (see below), shown only to you, and never sent to a model.
 
 Amounts, dates, and merchants stay readable. For UPI, IMPS, and NEFT, the other party's name is
 redacted when it looks like a person and kept when it looks like a business.
@@ -213,9 +235,14 @@ Redaction is best-effort. In **Settings**, the privacy section has:
 Your account names, institutions and the names of categories you created are swapped for aliases
 before anything reaches a model, and the assistant's replies are shown with your names put back.
 
+**Original narrations.** Each row's bank text is stored encrypted (`posting_originals`) with a
+key from `NARRATION_KEY`, or one generated into a Docker volume on first run. Back the key up
+with your database: without it the app falls back to the redacted text. Removing a statement
+removes its originals. To keep none, run without a key.
+
 Two things leave your machine: redacted statement lines (and your category descriptions) to the
 categorizer, and figures with aliases to the chat model. Consider asking your provider to enable
-zero data retention. The app has no login; it relies on binding to `127.0.0.1`.
+zero data retention. The app has no login; it relies on binding to `127.0.0.1`, and refuses other hosts and cross-site writes.
 
 ## 9. Asking questions
 
@@ -259,85 +286,5 @@ You do not need to upload everything at once, or in order.
 
 ## 12. For developers
 
-### Run the tests
-
-```sh
-uv sync                              # one workspace, Python 3.13
-uv run pytest                        # starts a throwaway PostgreSQL via Docker
-uv run ruff check . && uv run mypy packages/*/src api/src tools/check_imports.py
-uv run python tools/check_imports.py # package boundaries
-./tools/test_isolated.sh             # each library passes alone
-```
-
-Browser tests need the stack running. They empty the database first, so never point them at data you
-want to keep:
-
-```sh
-docker compose up -d --build
-cd web && npm ci && npx playwright install chromium && npx playwright test
-```
-
-`./scripts/check-ports.sh` verifies that PostgreSQL has no host port and that the web app and API
-listen on `127.0.0.1` only.
-
-### Layout
-
-A `uv` workspace of small packages under `packages/`, the API in `api/`, and the cockpit in `web/`.
-Each package states what it may depend on, and CI enforces it. See the README for the table.
-
-### Database migrations
-
-```sh
-cd packages/cfo-ledger
-export DATABASE_URL=postgresql+psycopg://USER:PASSWORD@HOST:5432/DBNAME
-uv run alembic upgrade head
-uv run alembic current
-```
-
-Compose runs `alembic upgrade head` when the API starts.
-
-### Using the API directly
-
-Everything under `/people/{person_id}` belongs to one person's ledger. Interactive documentation is
-at http://127.0.0.1:8000/docs. A short tour:
-
-```sh
-API=http://127.0.0.1:8000
-
-# create a person, add an account, finish setup
-PERSON=$(curl -s -X POST $API/people -H 'Content-Type: application/json' \
-  -d '{"name": "Asha Rao"}' | jq -r .id)
-ACCOUNT=$(curl -s -X POST $API/people/$PERSON/accounts -H 'Content-Type: application/json' \
-  -d '{"type": "savings", "institution": "HDFC Bank", "name": "HDFC Savings"}' | jq -r .id)
-curl -s -X POST $API/people/$PERSON/setup/complete
-
-# upload a statement (add -F password=... for a protected file)
-curl -s -X POST $API/people/$PERSON/accounts/$ACCOUNT/uploads -F file=@statement.xls
-
-# read the numbers
-curl -s $API/people/$PERSON/reports/overview
-curl -s "$API/people/$PERSON/reports/income-statement?month=2026-09"
-curl -s $API/people/$PERSON/inbox
-```
-
-| Route (under `/people/{person_id}`) | Purpose |
-| --- | --- |
-| `GET /setup`, `POST /setup/complete` | Whether setup is done; finish it (needs an account) |
-| `POST/GET /accounts`, `GET/PATCH/DELETE /accounts/{id}`, `GET /accounts/{id}/usage` | Add (`type`, `institution`, `name`, optional `opening_value_paise` and `opening_date`), list with balances, open (register, statements, holdings), rename, see what deleting removes, delete |
-| `POST /accounts/{id}/value` | A new value for an account without statements |
-| `GET /accounts/tree` | The books in accounting terms |
-| `POST /accounts/{id}/uploads`, `DELETE /imports/{id}` | Import a statement (multipart `file`, optional `password`); remove one |
-| `GET/POST /categories`, `PATCH/DELETE /categories/{id}`, `POST /categories/{id}/merge`, `POST /categories/{id}/retire` | Categories with their descriptions |
-| `GET /transactions` (filters: `account_id`, `category_id`, `month`, `q`), `PATCH /transactions/{id}/category` (`account_id`), `POST /transactions/{id}/ignore` | Browse and correct |
-| `POST /categorization/retry` | Categorize Uncategorized rows again |
-| `GET /reports/overview`, `/reports/balance-sheet`, `/reports/income-statement`, `/reports/safe-to-spend`, `/reports/leaks`, `GET /inbox` | The figures |
-| `GET/PATCH /settings` | Base amount kept aside and monthly allowance |
-| `GET/PUT /privacy/terms`, `GET /privacy/preview`, `GET/PUT /privacy/labels` | Redaction controls |
-| `POST /chat` | Server-sent events; send `{"message": "…"}` |
-
-Top-level: `GET/POST /people`, `POST /sample`, `GET /catalog`, `GET /health`. Amounts are
-`{"paise": 1234500, "formatted": "₹12,345.00"}`. Errors are `{"error": {"code", "message",
-"hint", "detail", "correlation_id"}}` (`message` and `hint` are plain language, `detail` is the
-technical reason) with one of `PARSE_FAILED`, `VALIDATION_FAILED`, `INVALID_INPUT`, `NOT_FOUND`,
-`CONFLICT`, `SETUP_REQUIRED`, `CATEGORY_IN_USE`, `PASSWORD_REQUIRED`, `PASSWORD_INVALID`,
-`REDACTION_FAILED`.
+Running the tests, the code layout, migrations and the HTTP API are in the
+[developer docs](README.md#for-developers).

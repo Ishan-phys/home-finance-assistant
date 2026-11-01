@@ -88,6 +88,16 @@ export function CategoriesPage() {
         title="Categories"
         subtitle="The buckets your money is sorted into. Click a name or a description to change it."
         action={<Button onClick={() => setAdding(true)}>＋ Add category</Button>}
+        about={{
+          id: "categories",
+          summary: "Categories are the labels every transaction is sorted under, such as Groceries or Salary. The Spending page is built from them.",
+          points: [
+            "Money out is for spending and Money in is for income. Each category has a short description of what belongs in it.",
+            "The description matters: it is what helps the app pick the right category for new transactions.",
+            "Rename a category or edit its description by clicking it. Merge two categories if you have too many of the same kind.",
+            "Changing a category here updates it everywhere, including past months.",
+          ],
+        }}
       />
       <ErrorNote message={action.error} />
       <div className="space-y-6">

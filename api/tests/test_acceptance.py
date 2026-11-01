@@ -36,6 +36,8 @@ def test_the_sample_ledger_matches_the_hand_derived_figures(database: Database) 
         "spent": paise(month["spent"]),
         "rewards": paise(month["rewards"]),
         "saved": paise(month["saved"]),
+        "net_in": paise(month["net_in"]),
+        "net_out": paise(month["net_out"]),
         "safe_to_spend": paise(sts["amount"]),
         "inbox": sorted(i["kind"] for i in inbox),
     }

@@ -33,6 +33,7 @@ from cfo.ledger.repositories.accounts import (
     ImportRepository,
     ValuationRepository,
 )
+from cfo.ledger.repositories.originals import OriginalRepository
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
 from cfo.metrics.balances import balance
 from cfo.metrics.reconcile import gaps, opening_amount
@@ -228,6 +229,7 @@ def ignore(s: Session, tx_id: Id) -> None:
         if p.origin is Origin.OBSERVED and p.dedup_hash:
             journal.dismiss(p.account_id, [p.dedup_hash])
     journal.delete(tx.id)
+    OriginalRepository(s).purge_orphans()
 
 
 # reconciliation -----------------------------------------------------------------------
@@ -404,6 +406,7 @@ def remove_import(s: Session, import_id: Id) -> RemovalResult:
     ValuationRepository(s).delete_for_import(import_id)
     ImportRepository(s).delete(import_id)
     pair_in_transit(s)
+    OriginalRepository(s).purge_orphans()
     before = len(JournalRepository(s).list_all([record.account_id]))
     for account_id in touched | {record.account_id}:
         recompute_opening(s, account_id)

@@ -46,6 +46,12 @@ DEFAULT_CATEGORIES: tuple[CategoryDef, ...] = (
     CategoryDef("Income:Salary", "Salary", "Pay from your employer", _IN),
     CategoryDef("Income:Other", "Other income", "Money in that is not salary or interest", _IN),
     CategoryDef("Income:Interest", "Interest", "Interest and dividends", _IN),
+    CategoryDef(
+        "Income:Refunds",
+        "Refunds",
+        "Money back from a merchant: refunds, reversals and returned purchases",
+        _IN,
+    ),
     CategoryDef("Income:Rewards", "Rewards", "Cashback and card rewards", _IN, Heading.REWARDS),
     CategoryDef(
         "Income:People:Received",
@@ -68,6 +74,24 @@ DEFAULT_CATEGORIES: tuple[CategoryDef, ...] = (
     CategoryDef("Expenses:Food:Groceries", "Groceries", "Supermarkets and daily provisions", _OUT),
     CategoryDef("Expenses:Shopping", "Shopping", "Clothes, electronics, online shopping", _OUT),
     CategoryDef("Expenses:Health", "Health", "Doctors, medicines, insurance", _OUT),
+    CategoryDef(
+        "Expenses:Grooming",
+        "Grooming",
+        "Haircuts, salon, spa, massage and other personal grooming",
+        _OUT,
+    ),
+    CategoryDef(
+        "Expenses:Fitness",
+        "Fitness",
+        "Gym and fitness subscriptions, sports coaching such as badminton, yoga, classes",
+        _OUT,
+    ),
+    CategoryDef(
+        "Expenses:HouseholdHelp",
+        "Household help",
+        "Home cleaning, maids, cooks and handyman services, including Urban Company bookings",
+        _OUT,
+    ),
     CategoryDef("Expenses:Transport", "Transport", "Fuel, cabs, public transport", _OUT),
     CategoryDef("Expenses:Travel", "Travel", "Flights, hotels, holidays", _OUT),
     CategoryDef("Expenses:Fees", "Fees", "Bank charges, card fees, interest paid", _OUT),

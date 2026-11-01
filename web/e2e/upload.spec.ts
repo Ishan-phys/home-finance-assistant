@@ -57,9 +57,11 @@ test("upload, fix the inbox, pair a card payment, and remove a statement", async
   await page.getByRole("dialog").getByRole("button", { name: "Upload" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Done" }).click();
 
+  // The starter rules recognise the card's "payment received" line as an own-account move, so it
+  // pairs with the bank payment by itself and nothing is left to fix in the inbox.
   await page.goto("/inbox");
-  await makeOwnMove(page, /BPPY|payment received|Card payment/i);
-  await expect(inbox).not.toContainText("₹16,268.00 left HDFC Savings");
+  await expect(page.getByText("₹16,268.00 left HDFC Savings")).toHaveCount(0);
+  await expect(page.getByText(/BPPY/)).toHaveCount(0);
 
   await page.goto(`/accounts/${card}`);
   await page.getByRole("tab", { name: "Statements" }).click();

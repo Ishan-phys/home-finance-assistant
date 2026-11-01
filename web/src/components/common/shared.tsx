@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Info } from "lucide-react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import type { Money } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -72,15 +73,93 @@ export function shortDate(iso: string | null): string {
   return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
+export interface PageAbout {
+  /** A stable name for remembering whether the reader closed it, e.g. "spending". */
+  id: string;
+  /** One or two sentences: what this page is for. */
+  summary?: ReactNode;
+  /** Short, concrete things the reader can do here or should know. */
+  points?: ReactNode[];
+}
+
+const GUIDE_EVENT = "cfo-guide";
+
+function subscribeGuides(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  window.addEventListener(GUIDE_EVENT, onChange);
+  return () => {
+    window.removeEventListener("storage", onChange);
+    window.removeEventListener(GUIDE_EVENT, onChange);
+  };
+}
+
+/** A collapsible note that says what a page is for. It starts open and stays closed once the
+ * reader closes it; the choice lives in localStorage, read before the first paint. */
+export function PageGuide({
+  about,
+  title = "About this page",
+  className,
+}: {
+  about: PageAbout;
+  title?: string;
+  className?: string;
+}) {
+  const key = `cfo-guide:${about.id}`;
+  const closed = useSyncExternalStore(
+    subscribeGuides,
+    () => window.localStorage.getItem(key) === "closed",
+    () => false,
+  );
   return (
-    <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
+    <details open={!closed} className={cn("rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-2 text-sm", className)}>
+      <summary
+        className="flex cursor-pointer list-none items-center gap-2 font-medium text-sky-900 dark:text-sky-200"
+        onClick={(e) => {
+          // The open state is ours, not the browser's: only a click changes it.
+          e.preventDefault();
+          window.localStorage.setItem(key, closed ? "open" : "closed");
+          window.dispatchEvent(new Event(GUIDE_EVENT));
+        }}
+      >
+        <Info className="size-4 shrink-0" aria-hidden />
+        {title}
+      </summary>
+      <div className="mt-2 space-y-2 text-muted-foreground">
+        {about.summary ? <p>{about.summary}</p> : null}
+        {about.points?.length ? (
+          <ul className="list-disc space-y-1 pl-5">
+            {about.points.map((p, i) => (
+              <li key={i}>{p}</li>
+            ))}
+          </ul>
+        ) : null}
       </div>
-      {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
-    </header>
+    </details>
+  );
+}
+
+export function PageHeader({
+  title,
+  subtitle,
+  action,
+  about,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  action?: ReactNode;
+  about?: PageAbout;
+}) {
+  return (
+    <>
+      <header className={cn("flex flex-wrap items-start justify-between gap-3", about ? "mb-3" : "mb-6")}>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
+        </div>
+        {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
+      </header>
+      {about ? <PageGuide about={about} className="mb-6" /> : null}
+    </>
   );
 }
 

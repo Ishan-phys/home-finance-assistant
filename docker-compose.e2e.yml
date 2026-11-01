@@ -1,0 +1,12 @@
+# A second, throwaway stack for the browser tests, so they never touch the data in `make up`.
+# Used by `make e2e`: its own project name (so its own volumes), other ports, and no model keys
+# (the tests expect the categorizer to be off, as in CI).
+services:
+  api:
+    env_file: !override
+      - .env.example
+    ports: !override
+      - "127.0.0.1:8100:8000"
+  web:
+    ports: !override
+      - "127.0.0.1:3210:3000"

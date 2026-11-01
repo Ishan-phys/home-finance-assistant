@@ -10,7 +10,13 @@ from cfo.core.types import AccountKind, AccountType, Direction, Heading
 
 def test_default_categories_match_the_spec() -> None:
     paths = [c.path for c in DEFAULT_CATEGORIES]
-    assert len(paths) == len(set(paths)) == 16
+    assert len(paths) == len(set(paths)) == 20
+    assert {
+        "Income:Refunds",
+        "Expenses:Grooming",
+        "Expenses:Fitness",
+        "Expenses:HouseholdHelp",
+    } <= set(paths)
     assert "Expenses:Food:Dining" in paths and "Income:People:Received" in paths
     assert all(c.description for c in DEFAULT_CATEGORIES)
     people = {c.path for c in DEFAULT_CATEGORIES if c.heading is Heading.PEOPLE}

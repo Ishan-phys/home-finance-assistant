@@ -19,7 +19,7 @@ function Nodes({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
                 {n.account_id ? n.name : n.name.replace(/-/g, " ")}
                 <span className="ml-2 font-mono text-[11px] text-muted-foreground">{n.path}</span>
               </span>
-              <Amount value={n.balance} />
+              <Amount value={n.balance} className={n.balance.paise === 0 ? "text-muted-foreground/60" : undefined} />
             </summary>
             {n.children.length ? <Nodes nodes={n.children} depth={depth + 1} /> : null}
           </details>
@@ -29,9 +29,8 @@ function Nodes({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
   );
 }
 
-/** The books in real accounting terms. Balance-sheet accounts show what they hold; income and
- * expense accounts show this month. Signs are the bookkeeping ones: liabilities, income and
- * equity are negative when they grow. */
+/** The books in real accounting terms, every account totalled over all time. Signs are the
+ * bookkeeping ones: liabilities, income and equity are negative when they grow. */
 export function AccountsTreePage() {
   const { version } = usePerson();
   const tree = useApi<AccountsTree>("/accounts/tree", version);
@@ -42,6 +41,16 @@ export function AccountsTreePage() {
         title="All accounts"
         subtitle="Your books in accounting terms. Every transaction moves money between these and adds up to zero. Investments are shown at cost here; their market value is on the Overview."
         action={<Button render={<Link href="/setup?step=accounts" />}>＋ Add account</Button>}
+        about={{
+          id: "all-accounts",
+          summary: "Every account in your books, grouped the way an accountant would. This is the page to check where a number on the Overview comes from.",
+          points: [
+            "Assets are what you own, liabilities are what you owe (cards, loans), and equity holds your opening balances.",
+            "Income and Expenses are totalled over all time, so older statements are included. For one month at a time, use Spending.",
+            "Liabilities, income and equity show as negative when they grow. That is normal bookkeeping, not a mistake.",
+            "Click a group's arrow to open or close it. Add a bank, card or investment account with Add account.",
+          ],
+        }}
       />
       <div className="space-y-4">
         {tree.data.kinds.map((k) => (

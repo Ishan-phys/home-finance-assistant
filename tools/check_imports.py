@@ -22,12 +22,28 @@ RULES: dict[str, tuple[str, set[str]]] = {
     "packages/cfo-parse": ("parse", {"core", "doc"}),
     "packages/cfo-categorize": ("categorize", {"core"}),
     "packages/cfo-metrics": ("metrics", {"core"}),
-    "packages/cfo-ledger": ("ledger", {"core", "metrics"}),
-    "packages/cfo-ingest": ("ingest", {"core", "parse", "doc", "redact", "categorize", "ledger"}),
+    "packages/cfo-rules": ("rules", {"core"}),
+    "packages/cfo-vault": ("vault", set()),
+    "packages/cfo-ledger": ("ledger", {"core", "metrics", "rules", "vault"}),
+    "packages/cfo-ingest": (
+        "ingest",
+        {"core", "parse", "doc", "redact", "categorize", "ledger", "vault"},
+    ),
     "packages/cfo-agent": ("agent", {"core", "metrics", "ledger", "redact"}),
     "api": (
         "api",
-        {"core", "metrics", "ledger", "ingest", "parse", "redact", "categorize", "agent"},
+        {
+            "core",
+            "metrics",
+            "ledger",
+            "ingest",
+            "parse",
+            "redact",
+            "categorize",
+            "agent",
+            "rules",
+            "vault",
+        },
     ),
 }
 
@@ -38,6 +54,8 @@ FORBIDDEN = {
     "packages/cfo-redact": {"sqlalchemy", "psycopg", "fastapi", "litellm", "openai"},
     "packages/cfo-parse": {"sqlalchemy", "psycopg", "fastapi", "litellm", "openai", "google"},
     "packages/cfo-categorize": {"sqlalchemy", "psycopg", "fastapi", "pdfplumber", "google"},
+    "packages/cfo-rules": {"sqlalchemy", "psycopg", "fastapi", "litellm", "openai", "cryptography"},
+    "packages/cfo-vault": {"sqlalchemy", "psycopg", "fastapi", "litellm", "openai"},
     "packages/cfo-metrics": {
         "sqlalchemy",
         "psycopg",

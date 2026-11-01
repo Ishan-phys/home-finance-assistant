@@ -14,6 +14,7 @@ class Settings:
     decisions_threshold: float
     categorization_model: str  # the generative fallback
     chat_model: str  # empty means the provider's default
+    allowed_hosts: tuple[str, ...] = ()  # empty means this machine and the web service
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -26,4 +27,7 @@ class Settings:
             decisions_threshold=float(env("DECISIONS_THRESHOLD") or 0.6),
             categorization_model=env("CATEGORIZATION_MODEL") or "claude-haiku-4-5-20251001",
             chat_model=env("CHAT_MODEL") or "",
+            allowed_hosts=tuple(
+                h.strip() for h in (env("ALLOWED_HOSTS") or "").split(",") if h.strip()
+            ),
         )

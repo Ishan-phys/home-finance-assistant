@@ -46,6 +46,16 @@ export function CategoryList({
                   onChanged();
                 }}
               />
+              <InlineText
+                label={`keywords of ${c.name}`}
+                value={c.keywords ?? ""}
+                placeholder="Add a few words that mark this category, e.g. haircut, spa"
+                className="text-xs italic text-muted-foreground"
+                onSave={async (keywords) => {
+                  await api.patch(`/categories/${c.id}`, { keywords });
+                  onChanged();
+                }}
+              />
             </div>
             {actions ? <div className="shrink-0">{actions(c)}</div> : null}
           </li>

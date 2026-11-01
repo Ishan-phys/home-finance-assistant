@@ -58,7 +58,11 @@ export function TxnTable({ rows, running = false }: { rows: Txn[]; running?: boo
                   <td className="whitespace-nowrap px-2 py-2 text-muted-foreground">{shortDate(t.date)}</td>
                   <td className="max-w-[18rem] px-2 py-2">
                     <div className="truncate font-medium">{t.payee}</div>
-                    {t.payee !== t.narration ? <div className="truncate text-xs text-muted-foreground">{t.narration}</div> : null}
+                    {(t.original ?? t.narration) !== t.payee ? (
+                      <div className="truncate text-xs text-muted-foreground" title={t.original ?? t.narration}>
+                        {t.original ?? t.narration}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="px-2 py-2">
                     <div className="flex flex-wrap items-center gap-1">
@@ -71,6 +75,7 @@ export function TxnTable({ rows, running = false }: { rows: Txn[]; running?: boo
                     {t.editable ? (
                       <CategoryPicker
                         txnId={t.id}
+                        narration={t.original ?? t.narration}
                         current={
                           t.category && !t.category.uncategorized
                             ? t.category.name
@@ -96,6 +101,10 @@ export function TxnTable({ rows, running = false }: { rows: Txn[]; running?: boo
                   <tr className="bg-muted/20">
                     <td />
                     <td colSpan={running ? 6 : 5} className="px-2 pb-3">
+                      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {t.original ? "Bank narration" : "Narration (personal details hidden)"}
+                      </p>
+                      <p className="mb-3 break-all font-mono text-xs">{t.original ?? t.narration}</p>
                       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Bookkeeping</p>
                       <table className="text-xs">
                         <tbody>

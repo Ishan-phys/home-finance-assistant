@@ -68,6 +68,19 @@ export function AccountView({ id }: { id: string }) {
       <PageHeader
         title={account.name}
         subtitle={[account.type_label, account.institution].filter(Boolean).join(" · ")}
+        about={{
+          id: "account",
+          summary: feed
+            ? "One account: its balance, every transaction, and the statements you uploaded to it."
+            : "One account you track by hand: its value, and the history of updates.",
+          points: feed
+            ? [
+                "Upload a statement to add its transactions. Uploading the exact same file twice adds nothing new.",
+                "A statement is checked against its closing balance. A mismatch means a transaction is missing or wrong.",
+                "Remove a statement to take its transactions back out.",
+              ]
+            : ["Use Update value whenever the balance changes. There are no statements for this kind of account."],
+        }}
         action={
           feed ? (
             <Button onClick={() => setUploading(true)}>Upload statement</Button>

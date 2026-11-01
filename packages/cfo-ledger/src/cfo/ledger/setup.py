@@ -30,11 +30,14 @@ from cfo.core.types import (
     Transaction,
 )
 from cfo.ledger.repositories.accounts import AccountRepository, SettingsRepository
+from cfo.ledger.repositories.originals import OriginalRepository
+from cfo.ledger.repositories.rules import RuleRepository
 from cfo.ledger.repositories.transactions import JournalRepository, MappingRepository
 from sqlalchemy.orm import Session
 
 MAX_DESCRIPTION = 200
 MAX_NAME = 60
+MAX_KEYWORDS = 20
 
 
 def create_ledger_defaults(s: Session, scope: Scope | None = None) -> None:
@@ -58,6 +61,18 @@ def create_ledger_defaults(s: Session, scope: Scope | None = None) -> None:
                     heading=c.heading,
                 )
             )
+
+
+def clean_keywords(raw: str) -> list[str]:
+    """A category's keywords: comma or newline separated, trimmed, no repeats, at most 20."""
+    seen: dict[str, str] = {}
+    for word in raw.replace("\n", ",").split(","):
+        word = " ".join(word.split())
+        if word and len(word) <= MAX_NAME:
+            seen.setdefault(word.casefold(), word)
+    if len(seen) > MAX_KEYWORDS:
+        raise InvalidInput(f"a category can have at most {MAX_KEYWORDS} keywords")
+    return list(seen.values())
 
 
 def _text(value: str, what: str, limit: int) -> str:
@@ -177,6 +192,7 @@ def delete_account(s: Session, account_id: Id) -> None:
     _real(s, account_id)
     remove_account_postings(s, account_id)
     AccountRepository(s).delete(account_id)
+    OriginalRepository(s).purge_orphans()
 
 
 # categories ---------------------------------------------------------------------------
@@ -237,15 +253,22 @@ def add_category(s: Session, inp: CategoryInput) -> Account:
 
 
 def edit_category(
-    s: Session, account_id: Id, *, name: str | None = None, description: str | None = None
+    s: Session,
+    account_id: Id,
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    keywords: str | None = None,
 ) -> Account:
-    """Rename or redescribe a category. The path stays, so history and mappings are kept."""
+    """Rename or redescribe a category, or change its keywords. The path stays, so history and mappings are kept."""
     _category(s, account_id)
     fields: dict[str, object] = {}
     if name is not None:
         fields["display_name"] = _text(name, "the category name", MAX_NAME)
     if description is not None:
         fields["description"] = _text(description, "the description", MAX_DESCRIPTION)
+    if keywords is not None:
+        fields["keywords"] = ", ".join(clean_keywords(keywords))
     return AccountRepository(s).update(account_id, **fields)
 
 
@@ -263,6 +286,7 @@ def retire_category(s: Session, account_id: Id, today: date) -> None:
     # What was remembered for it would keep these rows uncategorized for good, because a known
     # description is never sent to the categorizer again.
     MappingRepository(s).forget(account.path)
+    RuleRepository(s).delete_targeting(account.path)
     AccountRepository(s).retire(account_id, today)
 
 
@@ -280,6 +304,7 @@ def merge_category(s: Session, from_id: Id, into_id: Id, today: date) -> int:
         raise ConflictError("merge or retire the categories under it first")
     moved = JournalRepository(s).move_postings(source.id, target.id)
     MappingRepository(s).repoint(source.path, target.path)
+    RuleRepository(s).repoint(source.path, target.path)
     AccountRepository(s).retire(source.id, today)
     return moved
 
@@ -291,6 +316,7 @@ def delete_category(s: Session, account_id: Id) -> None:
     if _active_children(s, account):
         raise ConflictError("delete the categories under it first")
     MappingRepository(s).forget(account.path)
+    RuleRepository(s).delete_targeting(account.path)
     AccountRepository(s).delete(account_id)
 
 
