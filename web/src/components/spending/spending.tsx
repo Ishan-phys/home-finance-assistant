@@ -72,6 +72,16 @@ export function SpendingPage() {
       <PageHeader
         title="Spending"
         subtitle="Where your money came from and where it went."
+        about={{
+          id: "spending",
+          summary: "One month of money in and out, with a category breakdown. Use the arrows to move between months.",
+          points: [
+            "Net in is everything that came to you: income, rewards and cashback, and money people sent you.",
+            "Net out is everything you spent, plus money you sent to people.",
+            "Saved is net in less net out. Moving money between your own accounts or paying a card bill is not spending, so it is left out.",
+            "Click a category to see the transactions behind it. The line under the cards checks that the numbers add up to your net worth change.",
+          ],
+        }}
         action={
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon-sm" aria-label="Previous month" onClick={() => router.push(`/spending?month=${shift(month, -1)}`)}>
@@ -85,9 +95,18 @@ export function SpendingPage() {
         }
       />
       <div className="grid gap-4 sm:grid-cols-3">
-        <Panel title="Earned"><p className="text-2xl font-semibold tabular-nums">{s.earned.formatted}</p></Panel>
-        <Panel title="Spent"><p className="text-2xl font-semibold tabular-nums">{s.spent.formatted}</p></Panel>
-        <Panel title="Saved"><p className="text-2xl font-semibold tabular-nums">{s.saved.formatted}</p></Panel>
+        <Panel title="Net in">
+          <p className="text-2xl font-semibold tabular-nums">{s.net_in.formatted}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Income, rewards and money received</p>
+        </Panel>
+        <Panel title="Net out">
+          <p className="text-2xl font-semibold tabular-nums">{s.net_out.formatted}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Spending and money sent to people</p>
+        </Panel>
+        <Panel title="Saved">
+          <p className="text-2xl font-semibold tabular-nums">{s.saved.formatted}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Net in less net out</p>
+        </Panel>
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
         Net worth changed by {c.change_in_net_worth.formatted}: saved {c.saved.formatted}

@@ -61,7 +61,17 @@ export function SettingsPage() {
   const settings = useApi<Settings>("/settings", version);
   return (
     <div>
-      <PageHeader title="Settings" />
+      <PageHeader
+        title="Settings"
+        about={{
+          id: "settings",
+          summary: "Choose how cautious Safe to spend is, and control what personal detail is removed from statements.",
+          points: [
+            "The base amount is cash that Safe to spend never counts. The monthly allowance caps it for the month.",
+            "Privacy terms are extra words, such as your name, that are always removed from statements before they are stored or sent to a model.",
+          ],
+        }}
+      />
       <div className="space-y-4">
         {settings.data ? <SpendingSettings key={settings.data.setup_completed_at ?? "s"} settings={settings.data} /> : <Loading what="settings" />}
         <PrivacyCard version={version} refresh={refresh} />

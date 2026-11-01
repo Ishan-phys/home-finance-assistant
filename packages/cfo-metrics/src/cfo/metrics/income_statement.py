@@ -37,8 +37,16 @@ class IncomeStatement:
     categories: tuple[CategoryLine, ...]
 
     @property
+    def net_in(self) -> int:
+        return self.earned + self.rewards + self.people_in
+
+    @property
+    def net_out(self) -> int:
+        return self.spent + self.people_out
+
+    @property
     def saved(self) -> int:
-        return self.earned + self.rewards + self.people_in - self.spent - self.people_out
+        return self.net_in - self.net_out
 
 
 @dataclass(frozen=True, slots=True)

@@ -146,6 +146,16 @@ export function RulesPage() {
         title="Rules"
         subtitle="If a narration matches, the transaction goes to the category you choose, before any guessing. The first matching rule wins, from the top."
         action={<Button onClick={() => setEditing("new")}>＋ Add rule</Button>}
+        about={{
+          id: "rules",
+          summary: "Rules put transactions in the right category automatically, so you do not have to sort them one by one.",
+          points: [
+            "Each rule looks for text in a transaction's description. When it matches, the transaction goes to the category you chose.",
+            "Rules are checked from the top and the first match wins. Use the arrows to change the order.",
+            "Rules run before any guessing, so a rule always beats the assistant's suggestion.",
+            "Starter rules come with the app. The quickest way to add your own is to tick “Always do this” when you pick a category on a transaction.",
+          ],
+        }}
       />
       <ErrorNote message={action.error} />
       {note ? <p className="mb-3 text-sm text-muted-foreground">{note}</p> : null}

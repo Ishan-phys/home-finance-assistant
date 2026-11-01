@@ -192,7 +192,7 @@ export interface SafeToSpend {
 export interface Overview {
   as_of: string;
   net_worth: { total: Money; change_since_last_month: Money };
-  this_month: { month: string; earned: Money; spent: Money; saved: Money };
+  this_month: { month: string; net_in: Money; net_out: Money; saved: Money };
   safe_to_spend: SafeToSpend;
   inbox: { count: number; top: InboxItem[] };
 }
@@ -212,6 +212,8 @@ export interface IncomeStatement {
   end: string;
   earned: Money;
   spent: Money;
+  net_in: Money;
+  net_out: Money;
   saved: Money;
   rewards: Money;
   people_in: Money;
