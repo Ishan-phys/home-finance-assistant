@@ -149,10 +149,6 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
         with db.transaction(scope) as s:
             return apply_labels(value, PseudonymLabelRepository(s).all())
 
-    @top.get("/health")
-    def health() -> Json:
-        return {"status": "ok"}
-
     @top.get("/catalog")
     def catalog() -> Json:
         return build_catalog()

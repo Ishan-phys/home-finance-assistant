@@ -1,7 +1,7 @@
 # HTTP API
 
 Everything under `/people/{person_id}` belongs to one person's ledger. Interactive documentation is
-at http://127.0.0.1:8000/docs. A short tour:
+at http://127.0.0.1:8000/docs (sign in to the cockpit first: the page needs the same session). A short tour:
 
 ```sh
 API=http://127.0.0.1:8000

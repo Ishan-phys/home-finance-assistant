@@ -7,6 +7,10 @@ export default defineConfig({
   globalSetup: "./e2e/global-setup.ts",
   workers: 1,
   timeout: 60_000,
-  use: { baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000", screenshot: "only-on-failure" },
+  use: {
+    baseURL: process.env.E2E_BASE_URL ?? "http://127.0.0.1:3000",
+    screenshot: "only-on-failure",
+    storageState: "e2e/.auth/owner.json", // signed in as the test owner; global-setup writes it
+  },
   reporter: [["list"]],
 });

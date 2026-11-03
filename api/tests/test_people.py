@@ -11,16 +11,16 @@ import pytest
 from cfo.api.app import create_app
 from cfo.ledger.repositories.db import Database
 from cfo.testing import SeedClient
-from cfo.testing.api import PersonClient
+from cfo.testing.api import PersonClient, signed_in_client
 from fastapi.testclient import TestClient
 
 TODAY = date(2026, 10, 3)
 
 
 @pytest.fixture
-def anon(empty_database: Database) -> TestClient:
+def owner(empty_database: Database) -> TestClient:
     app = create_app(db=empty_database, client=_Spy(), clock=lambda: TODAY)
-    return TestClient(app, raise_server_exceptions=False)
+    return signed_in_client(app, raise_server_exceptions=False)
 
 
 class _Spy(SeedClient):
@@ -33,10 +33,10 @@ class _Spy(SeedClient):
         return super().complete(system, user)
 
 
-def person(anon: TestClient, name: str, family: list[str] | None = None) -> PersonClient:
-    r = anon.post("/people", json={"name": name, "family_names": family or []})
+def person(owner: TestClient, name: str, family: list[str] | None = None) -> PersonClient:
+    r = owner.post("/people", json={"name": name, "family_names": family or []})
     assert r.status_code == 201, r.text
-    return PersonClient(anon, r.json()["id"])
+    return PersonClient(owner, r.json()["id"])
 
 
 def statement(narration: str) -> bytes:
@@ -61,11 +61,11 @@ def link(p: PersonClient, name: str, type: str, institution: str) -> str:
     return str(r.json()["id"])
 
 
-def test_a_first_run_has_nobody_then_a_named_person_with_linked_accounts(anon: TestClient) -> None:
-    assert anon.get("/people").json() == []
-    assert anon.post("/people", json={"name": "  "}).status_code == 422
-    asha = person(anon, "Asha Rao")
-    listed = anon.get("/people").json()
+def test_a_first_run_has_nobody_then_a_named_person_with_linked_accounts(owner: TestClient) -> None:
+    assert owner.get("/people").json() == []
+    assert owner.post("/people", json={"name": "  "}).status_code == 422
+    asha = person(owner, "Asha Rao")
+    listed = owner.get("/people").json()
     assert [(p["name"], p["id"]) for p in listed] == [("Asha Rao", asha.person_id)]
 
     # linking accounts initializes an adapter for each, on this person's ledger
@@ -88,8 +88,8 @@ def test_a_first_run_has_nobody_then_a_named_person_with_linked_accounts(anon: T
     assert bank in {a["id"] for a in accounts}
 
 
-def test_two_people_are_kept_apart_over_http(anon: TestClient) -> None:
-    asha, ben = person(anon, "Asha Rao"), person(anon, "Ben Mills")
+def test_two_people_are_kept_apart_over_http(owner: TestClient) -> None:
+    asha, ben = person(owner, "Asha Rao"), person(owner, "Ben Mills")
     acc = link(asha, "Asha Savings", "savings", "HDFC Bank")
     link(ben, "Ben Savings", "savings", "SBI")
     up = asha.post(
@@ -120,12 +120,12 @@ def test_two_people_are_kept_apart_over_http(anon: TestClient) -> None:
     assert "Rao" in asha.get("/privacy/terms").json()["terms"]
     assert "Rao" not in ben.get("/privacy/terms").json()["terms"]
     # an unknown person is a 404, not an empty ledger
-    assert anon.get("/people/00000000-0000-0000-0000-000000000001/accounts").status_code == 404
+    assert owner.get("/people/00000000-0000-0000-0000-000000000001/accounts").status_code == 404
 
 
-def test_a_persons_name_reaches_no_stored_row_and_no_model_request(anon: TestClient) -> None:
-    spy: _Spy = anon.app.state.deps.client  # type: ignore[attr-defined]
-    mira = person(anon, "Mira Kulkarni", family=["Tara Nair"])
+def test_a_persons_name_reaches_no_stored_row_and_no_model_request(owner: TestClient) -> None:
+    spy: _Spy = owner.app.state.deps.client  # type: ignore[attr-defined]
+    mira = person(owner, "Mira Kulkarni", family=["Tara Nair"])
     acc = link(mira, "Mira's account", "savings", "HDFC Bank")
     narration = "UPI-MIRA KULKARNI-x-IFSC-1-Rent to TARA NAIR via Mira"
     r = mira.post(f"/accounts/{acc}/uploads", files={"file": ("s.xlsx", statement(narration))})
@@ -140,23 +140,23 @@ def test_a_persons_name_reaches_no_stored_row_and_no_model_request(anon: TestCli
     assert "[PERSON:" in sent
 
 
-def test_the_sample_is_a_person_and_only_offered_before_anyone_exists(anon: TestClient) -> None:
-    created = anon.post("/sample")
+def test_the_sample_is_a_person_and_only_offered_before_anyone_exists(owner: TestClient) -> None:
+    created = owner.post("/sample")
     assert created.status_code == 201 and created.json()["accounts"] == 6
     pid = created.json()["person_id"]
-    assert anon.get(f"/people/{pid}/accounts").json()[0]["name"].startswith("Sample")
-    assert anon.get(f"/people/{pid}/setup").json()["completed"] is True
-    assert anon.post("/sample").status_code == 409
-    person(anon, "Someone Else")  # people may still be added afterwards
-    assert len(anon.get("/people").json()) == 2
+    assert owner.get(f"/people/{pid}/accounts").json()[0]["name"].startswith("Sample")
+    assert owner.get(f"/people/{pid}/setup").json()["completed"] is True
+    assert owner.post("/sample").status_code == 409
+    person(owner, "Someone Else")  # people may still be added afterwards
+    assert len(owner.get("/people").json()) == 2
 
 
-def test_chat_is_per_person(anon: TestClient) -> None:
-    created = anon.post("/sample").json()
-    sample = PersonClient(anon, created["person_id"])
-    other = person(anon, "Ben Mills")
+def test_chat_is_per_person(owner: TestClient) -> None:
+    created = owner.post("/sample").json()
+    sample = PersonClient(owner, created["person_id"])
+    other = person(owner, "Ben Mills")
     # each person gets their own chat service, and its tools read only their ledger
-    registry = anon.app.state.deps  # type: ignore[attr-defined]
+    registry = owner.app.state.deps  # type: ignore[attr-defined]
     assert registry is not None
     assert sample.get("/reports/balance-sheet").json()["net_worth"]["paise"] != 0
     assert other.get("/reports/balance-sheet").json()["net_worth"]["paise"] == 0

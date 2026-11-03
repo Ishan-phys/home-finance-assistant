@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from datetime import date
 
+import pytest
 from cfo.api.app import create_app
 from cfo.ledger.repositories.db import Database
 from cfo.testing import SeedClient
+from cfo.testing.api import signed_in_client
 from fastapi.testclient import TestClient
 
 TODAY = date(2026, 10, 3)
 
 
 def client(database: Database) -> TestClient:
-    return TestClient(create_app(db=database, client=SeedClient(), clock=lambda: TODAY))
+    return signed_in_client(create_app(db=database, client=SeedClient(), clock=lambda: TODAY))
 
 
 def test_a_foreign_host_header_is_refused(database: Database) -> None:
@@ -38,3 +40,22 @@ def test_a_cross_site_write_is_refused_but_reads_and_same_site_writes_work(
     assert (
         c.get("/people", headers={"Origin": "https://evil.example"}).status_code == 200
     )  # reads need CORS to be seen
+
+
+def test_allowed_hosts_adds_to_the_local_names_instead_of_replacing_them(
+    database: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The web service reaches the API as `api`; dropping it would break every cockpit request."""
+    monkeypatch.setenv("ALLOWED_HOSTS", "cfo.example.ts.net")
+    c = client(database)
+    for host in ("cfo.example.ts.net", "api:8000", "localhost:3000", "127.0.0.1:8000"):
+        assert c.get("/health", headers={"Host": host}).status_code == 200, host
+    assert c.get("/health", headers={"Host": "evil.example"}).status_code == 400
+    write = {"Origin": "https://cfo.example.ts.net"}
+    assert c.post("/people", json={"name": "Via Tailscale"}, headers=write).status_code == 201
+    assert (
+        c.post(
+            "/people", json={"name": "Nope"}, headers={"Origin": "https://evil.example"}
+        ).status_code
+        == 403
+    )

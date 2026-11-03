@@ -62,6 +62,16 @@ Chat and categorization need `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in `.env` (
 Without a key, the assistant says it is unavailable and categorization is off; everything else
 works. The tests never call a live model.
 
+## Sign-in
+
+The API needs an owner to sign in. For local work, `.env` holds one (see the user guide). The
+browser tests use a fixed throwaway owner in `docker-compose.e2e.yml` (username `owner`, password
+`e2e-owner-password`), and `web/e2e/global-setup.ts` signs in once and keeps the session for every
+test. The Python tests set their own owner in `api/tests/conftest.py`; they never read `.env`.
+
+In a compose file, write each `$` in the hash as `$$`. In `.env`, put the hash in single quotes.
+Otherwise Compose replaces the `$` parts with nothing and every sign-in fails with a 401.
+
 ## Making a change
 
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) for the firm rules (no real data, integer paise, no

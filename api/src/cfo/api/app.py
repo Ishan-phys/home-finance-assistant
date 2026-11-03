@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 
-from cfo.api import errors, guard
+from cfo.api import auth, errors, guard
 from cfo.api.chat import ChatRegistry
 from cfo.api.config import Settings
 from cfo.categorize.categorizer import AnthropicClient, ModelClient
@@ -16,7 +16,7 @@ from cfo.categorize.port import Categorizer
 from cfo.core.dates import today_ist
 from cfo.ledger.repositories.db import Database
 from cfo.vault import Vault, load_vault
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from google.adk.models.anthropic_llm import AnthropicLlm
 from google.adk.models.base_llm import BaseLlm
 from google.adk.models.lite_llm import LiteLlm
@@ -96,10 +96,13 @@ def create_app(
         settings=cfg,
         vault=vault or load_vault(os.environ),
     )
-    app = FastAPI(title="AI CFO", version="0.1.0")
+    app = FastAPI(title="AI CFO", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
     errors.install(app)
     guard.install(app, cfg.allowed_hosts or guard.DEFAULT_HOSTS)
+    auth.install(app, cfg)  # sign-in and health: the only routes without the owner's session
     model = chat_model or build_chat_model(cfg)
-    app.include_router(build_router(deps, ChatRegistry(deps.db, clock, model)))
+    locked = [Depends(auth.require_owner)]
+    app.include_router(auth.docs_router(app), dependencies=locked)
+    app.include_router(build_router(deps, ChatRegistry(deps.db, clock, model)), dependencies=locked)
     app.state.deps = deps
     return app

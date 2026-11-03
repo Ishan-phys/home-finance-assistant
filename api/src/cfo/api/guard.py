@@ -43,6 +43,8 @@ class OriginGuard(BaseHTTPMiddleware):
 
 
 def install(app: FastAPI, allowed_hosts: Sequence[str] = DEFAULT_HOSTS) -> None:
-    hosts = list(allowed_hosts) or list(DEFAULT_HOSTS)
+    # Extra names are added to the local ones: the web service reaches the API as `api`, so
+    # dropping the defaults would break every request the cockpit makes.
+    hosts = [*DEFAULT_HOSTS, *(h for h in allowed_hosts if h not in DEFAULT_HOSTS)]
     app.add_middleware(OriginGuard, allowed=hosts)
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
