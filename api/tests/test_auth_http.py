@@ -40,26 +40,22 @@ def test_a_malformed_stored_hash_refuses_rather_than_raising() -> None:
 
 
 def test_a_session_expires_after_five_days_and_is_tied_to_user_secret_and_password() -> None:
-    fp = auth.password_fingerprint("hash-a")
-    token = auth.make_session(OWNER_USERNAME, SECRET, fp, now=1_000.0)
-    check = dict(username=OWNER_USERNAME, secret=SECRET, fingerprint=fp)
+    token = auth.make_session(OWNER_USERNAME, SECRET, "hash-a", now=1_000.0)
+    check = dict(username=OWNER_USERNAME, secret=SECRET, password_hash="hash-a")
     assert auth.session_is_valid(token, now=1_000.0, **check)
     assert auth.session_is_valid(token, now=1_000.0 + 5 * 24 * 3600 - 1, **check)
     assert not auth.session_is_valid(token, now=1_000.0 + 5 * 24 * 3600 + 1, **check)
     assert not auth.session_is_valid(token, now=1_000.0, **{**check, "secret": "other" * 8})
-    assert not auth.session_is_valid(
-        token, now=1_000.0, **{**check, "fingerprint": auth.password_fingerprint("hash-b")}
-    )
+    assert not auth.session_is_valid(token, now=1_000.0, **{**check, "password_hash": "hash-b"})
     assert not auth.session_is_valid(token, now=1_000.0, **{**check, "username": "someone"})
 
 
 def test_a_tampered_session_is_refused() -> None:
-    fp = auth.password_fingerprint("hash-a")
-    payload, _sig = auth.make_session(OWNER_USERNAME, SECRET, fp, now=1_000.0).split(".")
-    forged = auth._b64(b'{"u":"owner","f":"%s","e":99999999999}' % fp.encode())
-    for token in (f"{forged}.{_sig}", f"{payload}.AAAA", "nodot", ""):
+    payload, sig = auth.make_session(OWNER_USERNAME, SECRET, "hash-a", now=1_000.0).split(".")
+    forged = auth._b64(b'{"u":"owner","e":99999999999}')  # a far-future expiry, old signature
+    for token in (f"{forged}.{sig}", f"{payload}.AAAA", "nodot", ""):
         assert not auth.session_is_valid(
-            token, username=OWNER_USERNAME, secret=SECRET, fingerprint=fp, now=1_000.0
+            token, username=OWNER_USERNAME, secret=SECRET, password_hash="hash-a", now=1_000.0
         )
 
 

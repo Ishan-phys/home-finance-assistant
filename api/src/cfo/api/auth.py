@@ -2,9 +2,10 @@
 
 The password is never stored. OWNER_PASSWORD_HASH holds a scrypt hash, made with
 `python -m cfo.api.auth`. A session is a cookie the server can check without storing anything:
-a payload (username, expiry, and a fingerprint of the password hash, so changing the password
-signs every browser out) plus an HMAC over it keyed with SESSION_SECRET. A restart keeps everyone
-signed in; rotating SESSION_SECRET signs everyone out. Logging out clears the cookie in the
+a payload (username and expiry) plus an HMAC over it. The HMAC key is made from SESSION_SECRET
+and the password hash together, so changing the password signs every browser out and nothing
+derived from the password is stored in the cookie. A restart keeps everyone signed in; rotating
+SESSION_SECRET signs everyone out. Logging out clears the cookie in the
 browser only: a copy of the cookie stays valid until it expires or a secret changes.
 
 Every route is locked unless it is listed as public here. Without a complete setup every locked
@@ -84,37 +85,31 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(candidate, _unb64(digest))
 
 
-def password_fingerprint(password_hash: str) -> str:
-    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+def _signing_key(secret: str, password_hash: str) -> bytes:
+    """A key that changes when either the session secret or the password does."""
+    return hmac.new(secret.encode(), password_hash.encode(), hashlib.sha256).digest()
 
 
-def _sign(payload: str, secret: str) -> str:
-    return _b64(hmac.new(secret.encode(), payload.encode(), hashlib.sha256).digest())
+def _sign(payload: str, key: bytes) -> str:
+    return _b64(hmac.new(key, payload.encode(), hashlib.sha256).digest())
 
 
-def make_session(username: str, secret: str, fingerprint: str, now: float) -> str:
+def make_session(username: str, secret: str, password_hash: str, now: float) -> str:
     payload = _b64(
-        json.dumps(
-            {"u": username, "f": fingerprint, "e": int(now) + SESSION_SECONDS},
-            separators=(",", ":"),
-        ).encode()
+        json.dumps({"u": username, "e": int(now) + SESSION_SECONDS}, separators=(",", ":")).encode()
     )
-    return f"{payload}.{_sign(payload, secret)}"
+    return f"{payload}.{_sign(payload, _signing_key(secret, password_hash))}"
 
 
 def session_is_valid(
-    token: str, *, username: str, secret: str, fingerprint: str, now: float
+    token: str, *, username: str, secret: str, password_hash: str, now: float
 ) -> bool:
     try:
         payload, signature = token.split(".")
-        if not hmac.compare_digest(signature, _sign(payload, secret)):
+        if not hmac.compare_digest(signature, _sign(payload, _signing_key(secret, password_hash))):
             return False
         data: dict[str, Any] = json.loads(_unb64(payload))
-        return (
-            hmac.compare_digest(str(data["u"]), username)
-            and hmac.compare_digest(str(data["f"]), fingerprint)
-            and float(data["e"]) > now
-        )
+        return hmac.compare_digest(str(data["u"]), username) and float(data["e"]) > now
     except (ValueError, KeyError, TypeError):
         return False
 
@@ -166,18 +161,13 @@ class SignIn:
             token or "",
             username=s.owner_username,
             secret=s.session_secret,
-            fingerprint=password_fingerprint(s.owner_password_hash),
+            password_hash=s.owner_password_hash,
             now=self.now(),
         )
 
     def issue(self, response: Response) -> None:
         s = self.settings
-        token = make_session(
-            s.owner_username,
-            s.session_secret,
-            password_fingerprint(s.owner_password_hash),
-            self.now(),
-        )
+        token = make_session(s.owner_username, s.session_secret, s.owner_password_hash, self.now())
         response.set_cookie(
             COOKIE,
             token,

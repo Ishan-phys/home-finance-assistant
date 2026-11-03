@@ -62,7 +62,18 @@ jobs:
     needs: [python, web]
     steps:
       - uses: actions/checkout@v7
-      - run: cp .env.example .env
+      - name: Write .env with the throwaway test owner
+        # Same synthetic owner as docker-compose.e2e.yml and web/e2e/global-setup.ts (password
+        # e2e-owner-password). The hash has $ signs, so it is single-quoted. Plain HTTP on the
+        # runner, so the session cookie is not Secure.
+        run: |
+          grep -v '^OWNER_\|^SESSION_' .env.example > .env
+          cat >> .env <<'EOF'
+          OWNER_USERNAME=owner
+          OWNER_PASSWORD_HASH='scrypt$32768$8$1$t_qJXf1w6eCVemXxhnxAdQ$rMoKscTerMYVOuGXTxyxt3kuh3mLam5InkDhcXu2mKk'
+          SESSION_SECRET=ci-session-secret-not-used-anywhere-else-0123456789
+          SESSION_COOKIE_SECURE=false
+          EOF
       - run: docker compose up -d --build --wait
       - uses: actions/setup-node@v7
         with:
