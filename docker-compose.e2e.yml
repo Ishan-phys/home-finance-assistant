@@ -5,6 +5,12 @@ services:
   api:
     env_file: !override
       - .env.example
+    environment:
+      # Throwaway test owner, plain HTTP on loopback. Not a real password or secret.
+      OWNER_USERNAME: owner
+      OWNER_PASSWORD_HASH: 'scrypt$$32768$$8$$1$$t_qJXf1w6eCVemXxhnxAdQ$$rMoKscTerMYVOuGXTxyxt3kuh3mLam5InkDhcXu2mKk'
+      SESSION_SECRET: e2e-session-secret-not-used-anywhere-else-0123456789
+      SESSION_COOKIE_SECURE: "false"
     ports: !override
       - "127.0.0.1:8100:8000"
   web:

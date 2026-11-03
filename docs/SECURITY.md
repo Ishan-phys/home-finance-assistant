@@ -28,10 +28,15 @@ We aim to acknowledge a report within a week and to say how we will handle it so
 - **Models see redacted text only**, but they do see merchants, amounts and dates. If you enable
   OpenAI's Decisions API or Anthropic's API, those providers receive that redacted text. Check
   your account's data-retention settings.
-- **The app is a single-household local tool.** There is no login, and anyone who can reach the
-  API can read and change everything. It binds to `127.0.0.1` and refuses requests whose `Host` or
-  browser `Origin` is not this machine or the web service (`ALLOWED_HOSTS` extends the list). Do
-  not expose it to a network, a tunnel or a shared host without adding authentication first.
+- **The app is a single-household tool with one owner sign-in.** Every API route except `/health`
+  and the sign-in routes needs a valid session cookie. The password is stored only as a salted
+  scrypt hash (`OWNER_PASSWORD_HASH`), sessions last 5 days, and repeated wrong passwords lock the
+  form for 15 minutes. The app binds to `127.0.0.1` and refuses requests whose `Host` or browser
+  `Origin` is not this machine or the web service (`ALLOWED_HOSTS` extends the list). Sessions are
+  signed cookies with no server-side record, so signing out clears the browser's copy only; to
+  end every session, change `SESSION_SECRET`. This is a single-owner sign-in, not a multi-user
+  system, and it has no second factor. Put a network in front of it (for example Tailscale) rather
+  than the open internet.
 - **Original narrations are encrypted, the rest of the database is not.** The unredacted bank text
   is sealed with a key (`NARRATION_KEY`, or a generated file in a Docker volume), so a leaked
   database dump shows ciphertext. Anyone with access to the host can read both the key and the

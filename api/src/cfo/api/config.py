@@ -15,6 +15,10 @@ class Settings:
     categorization_model: str  # the generative fallback
     chat_model: str  # empty means the provider's default
     allowed_hosts: tuple[str, ...] = ()  # empty means this machine and the web service
+    owner_username: str = ""
+    owner_password_hash: str = ""  # from `python -m cfo.api.auth`; the password is never stored
+    session_secret: str = ""  # signs session cookies; at least 32 characters
+    session_cookie_secure: bool = True  # off only for the throwaway test stack over plain HTTP
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -30,4 +34,8 @@ class Settings:
             allowed_hosts=tuple(
                 h.strip() for h in (env("ALLOWED_HOSTS") or "").split(",") if h.strip()
             ),
+            owner_username=env("OWNER_USERNAME") or "",
+            owner_password_hash=env("OWNER_PASSWORD_HASH") or "",
+            session_secret=env("SESSION_SECRET") or "",
+            session_cookie_secure=(env("SESSION_COOKIE_SECURE") or "true").lower() != "false",
         )

@@ -1,15 +1,16 @@
 "use client";
 
-import { ArrowLeftRight, BookOpen, Inbox, LayoutDashboard, ListFilter, PieChart, Plus, Settings, Sparkles, Tags } from "lucide-react";
+import { ArrowLeftRight, BookOpen, Inbox, LayoutDashboard, ListFilter, LogOut, PieChart, Plus, Settings, Sparkles, Tags } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Amount } from "@/components/common/shared";
 import type { BalanceSheet, InboxItem } from "@/lib/api";
 import { usePerson } from "@/lib/person";
 import { useApi } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
 import { PersonSwitcher } from "./people";
+import { SIGNED_OUT_EVENT } from "@/lib/auth";
 
 function NavLink({
   href,
@@ -51,6 +52,7 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
   const sheet = useApi<BalanceSheet>("/reports/balance-sheet", version);
   const inbox = useApi<InboxItem[]>("/inbox", version);
   const path = usePathname();
+  const [signOutFailed, setSignOutFailed] = useState(false);
 
   return (
     <nav aria-label="Main" className="flex h-full flex-col gap-4 overflow-y-auto px-3 py-4">
@@ -119,6 +121,24 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
           <Sparkles className="size-4" />
           Ask
         </button>
+        <button
+          type="button"
+          onClick={async () => {
+            setSignOutFailed(false);
+            const res = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+            if (res?.ok) window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
+            else setSignOutFailed(true);
+          }}
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+        >
+          <LogOut className="size-4" />
+          Sign out
+        </button>
+        {signOutFailed ? (
+          <p role="status" className="px-2.5 text-xs text-destructive">
+            Could not sign out. Check your connection and try again.
+          </p>
+        ) : null}
       </div>
     </nav>
   );

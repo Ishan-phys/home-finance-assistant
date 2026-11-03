@@ -1,3 +1,5 @@
+import { SIGNED_OUT_EVENT } from "@/lib/auth";
+
 // Types for the API, mirroring the reports (api/src/cfo/api/routes.py and cfo.ledger.reports).
 // Every amount arrives as paise plus a preformatted string, so the browser never does money maths.
 
@@ -309,6 +311,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       body = await res.json();
     } catch {
       /* not JSON */
+    }
+    if (res.status === 401 && body.error?.code === "NOT_SIGNED_IN") {
+      window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
     }
     throw new ApiError(
       body.error?.code ?? "ERROR",

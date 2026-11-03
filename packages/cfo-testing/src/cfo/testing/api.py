@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-UNSCOPED = ("/health", "/sample", "/people", "/catalog")
+UNSCOPED = ("/health", "/sample", "/people", "/catalog", "/auth")
+
+# The owner the test app is set up with (see api/tests/conftest.py). Test-only values.
+OWNER_USERNAME = "owner"
+OWNER_PASSWORD = "test-owner-password"
+TEST_BASE_URL = "https://testserver"  # the session cookie is Secure, so the test client is HTTPS
 
 
 class PersonClient:
@@ -41,8 +46,17 @@ class PersonClient:
         return self.client.get(self.url(path)).headers
 
 
-def person_client(database: Any, app: Any, **kw: Any) -> PersonClient:
-    """The default test person's client for an app built over `database`."""
+def signed_in_client(app: Any, **kw: Any) -> Any:
+    """A TestClient already signed in as the test owner."""
     from fastapi.testclient import TestClient
 
-    return PersonClient(TestClient(app, **kw), database.default_person_id)
+    kw.setdefault("base_url", TEST_BASE_URL)
+    client = TestClient(app, **kw)
+    res = client.post("/auth/login", json={"username": OWNER_USERNAME, "password": OWNER_PASSWORD})
+    assert res.status_code == 200, res.text
+    return client
+
+
+def person_client(database: Any, app: Any, **kw: Any) -> PersonClient:
+    """The default test person's client for an app built over `database`, signed in."""
+    return PersonClient(signed_in_client(app, **kw), database.default_person_id)

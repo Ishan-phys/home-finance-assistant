@@ -37,6 +37,21 @@ Open `.env` and fill in one key (OpenAI or Anthropic, not both):
 OPENAI_API_KEY=sk-...        # or: ANTHROPIC_API_KEY=sk-ant-...
 ```
 
+Then set up sign-in, using the same `.env` file. Choose a username and a password, and run:
+
+```sh
+uv run python -m cfo.api.auth      # type the password twice; it prints a hash
+```
+
+Put the username in `OWNER_USERNAME`, the printed hash in `OWNER_PASSWORD_HASH` inside single
+quotes (it contains `$` signs), and a long random string in `SESSION_SECRET`:
+
+```sh
+OWNER_USERNAME=ishan
+OWNER_PASSWORD_HASH='scrypt$32768$8$1$...'
+SESSION_SECRET=...           # python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
 Everything else in `.env` has a sensible default. Then:
 
 ```sh
@@ -49,11 +64,21 @@ settles, open **http://127.0.0.1:3000**.
 | Service | Address | Notes |
 | --- | --- | --- |
 | Cockpit (web app) | http://127.0.0.1:3000 | What you use |
-| API | http://127.0.0.1:8000 | Used by the cockpit; `/docs` shows its schema |
+| API | http://127.0.0.1:8000 | Used by the cockpit; signing in is required for every request except `/health` |
 | PostgreSQL | not published | Reachable only from the other containers |
 
 Both ports bind to `127.0.0.1`, so nothing else on your network can reach the app. To check:
 `./scripts/check-ports.sh`.
+
+### Signing in
+
+Open the cockpit and sign in with the username and password from `.env`. You stay signed in on that
+browser for 5 days. **Sign out** is at the bottom of the sidebar.
+
+- Five wrong passwords in 15 minutes lock the form for 15 minutes, even for the right password.
+- Changing `OWNER_PASSWORD_HASH` signs every browser out. Changing `SESSION_SECRET` does too.
+- Signing out clears the cookie in that browser. A copy of the cookie stays valid until it expires,
+  so if a device is lost, change `SESSION_SECRET` and restart.
 
 `make up` starts the stack without rebuilding images that already exist; `make rebuild` rebuilds after you change code. `make help` lists every shortcut. To stop: `Ctrl+C`, or `make down`. Your data lives in a Docker volume and survives a
 restart. `docker compose down -v` deletes it.
@@ -69,7 +94,7 @@ restart. `docker compose down -v` deletes it.
 | `DECISIONS_THRESHOLD` | `0.6` | Labels below this confidence stay Uncategorized |
 | `CATEGORIZATION_MODEL` | `claude-haiku-4-5-20251001` | The Claude fallback |
 | `NARRATION_KEY` | generated | Key that encrypts original narrations at rest |
-| `ALLOWED_HOSTS` | local only | Extra host names the API answers to |
+| `ALLOWED_HOSTS` | local only | Extra host names the API answers to, added to `localhost`, `127.0.0.1` and the web service. Set it to the name you browse by, for example your Tailscale name |
 | `CHAT_MODEL` | provider default | The chat model (`claude-sonnet-5-5` or `gpt-5.5`) |
 | `POSTGRES_PASSWORD` | `cfo-local-dev` | Database password (the database is not reachable from outside Docker) |
 
@@ -242,7 +267,7 @@ removes its originals. To keep none, run without a key.
 
 Two things leave your machine: redacted statement lines (and your category descriptions) to the
 categorizer, and figures with aliases to the chat model. Consider asking your provider to enable
-zero data retention. The app has no login; it relies on binding to `127.0.0.1`, and refuses other hosts and cross-site writes.
+zero data retention. Only the owner can sign in (see Signing in above). The app also binds to `127.0.0.1` and refuses other hosts and cross-site writes.
 
 ## 9. Asking questions
 
