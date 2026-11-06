@@ -1,6 +1,6 @@
 from cfo.metrics.inbox import inbox
 from cfo.testing.books import ACCOUNTS, CARD, OPEN, SAV, TRANSIT, UNCAT_OUT
-from cfo.testing.helpers import INF, OBS, SYS, assertion, d, imp, txn
+from cfo.testing.helpers import INF, OBS, OWN, SYS, assertion, d, imp, txn
 
 
 def test_inbox_lists_uncategorized_unpaired_gap_and_card_due() -> None:
@@ -29,3 +29,20 @@ def test_a_cashback_credit_is_not_a_card_payment() -> None:
     card_import = imp(CARD, "2026-09-08", amount_due=390000, due_date=d("2026-10-03"))
     cashback = txn("2026-09-08", (CARD, 10000, OBS), (REWARDS, -10000, INF))
     assert [i.kind for i in inbox(ACCOUNTS, [cashback], [], [card_import])] == ["card_due"]
+
+
+def test_a_part_payment_leaves_the_rest_due_and_a_second_payment_clears_it() -> None:
+    card_import = imp(CARD, "2026-09-20", amount_due=1211186, due_date=d("2026-10-05"))
+    part = txn("2026-09-28", (SAV, -1000000, OBS), (CARD, 1000000, OWN))
+    left = [i for i in inbox(ACCOUNTS, [part], [], [card_import]) if i.kind == "card_due"]
+    assert [(i.amount, i.due) for i in left] == [(211186, 1211186)]
+    rest = txn("2026-10-03", (SAV, -211186, OBS), (CARD, 211186, OWN))
+    assert [i.kind for i in inbox(ACCOUNTS, [part, rest], [], [card_import])] == []
+
+
+def test_an_overpayment_and_a_payment_before_the_statement_date() -> None:
+    card_import = imp(CARD, "2026-09-20", amount_due=500000, due_date=d("2026-10-05"))
+    over = txn("2026-09-28", (SAV, -700000, OBS), (CARD, 700000, OWN))
+    assert inbox(ACCOUNTS, [over], [], [card_import]) == ()
+    old = txn("2026-09-10", (SAV, -500000, OBS), (CARD, 500000, OWN))  # paid the previous bill
+    assert [i.amount for i in inbox(ACCOUNTS, [old], [], [card_import])] == [500000]

@@ -208,9 +208,34 @@ add the account again and upload its statements.
 | Item | What to do |
 | --- | --- |
 | **Needs a category** | **Choose category**. The choice is remembered for the same description in later statements, and applied to other rows like it |
-| **Left … for an account of yours** / **Arrived in … from an account of yours** | Upload the statement of the other account. If it is not one of your accounts, choose a category instead |
+| **Left … for an account of yours** / **Arrived in … from an account of yours** | Upload the statement of the other account. If it is not one of your accounts, choose a category instead. If money left your bank to pay a credit card, click **Pay a card** (see below) |
 | **… is short of its statement** | A statement is missing for that period. Upload it |
-| **Card bill … is due** | Shows until a payment to the card appears after the statement date |
+| **Card bill … is due** | Shows until payments to the card since the statement date cover it. If you paid part of it, it says how much is still due, for example "₹2,111.86 of the ₹12,111.86 bill is still due" |
+
+### Paying a credit card
+
+There are two ways to settle a card bill, and they work together.
+
+- **Upload the card's statement.** Its payment line pairs with the matching payment from your bank.
+- **Say which card a bank payment was for.** On a row that left your bank account (for example a
+  CRED payment), click **Pay a card** in the Inbox, or open **Choose category** and pick a card
+  under **Pay a credit card**. The card shows what it owes now, and the card that owes exactly the
+  amount (or exactly what is left of its bill) is marked **Matches this payment**. The card owes
+  that much less straight away, the bill leaves the Inbox once your payments cover it, and
+  Net worth and Spending do not change: it is a payment, not an expense. The Transactions page
+  shows the row as "Paid to *card* · awaiting statement".
+
+When you later upload the card's statement, its line for the same payment (the same card, the same
+amount, within three days) replaces the one you recorded, so nothing is counted twice. A payment
+with a different amount is never matched by guesswork: both stay visible, and the statement's
+balance check shows the difference.
+
+**Picked the wrong card?** A message at the bottom of the screen offers **Undo** for 45 seconds. It
+puts the row back exactly as it was. After that, open the row's category button and pick the
+right card; that moves the payment. Once the card's statement has matched the payment, it is a
+confirmed movement and cannot be changed this way. Only money that left a bank or cash account,
+and is not already matched, can pay a card, and a card payment is recorded one at a time, never as
+a rule.
 
 ### Rules
 

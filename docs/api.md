@@ -31,6 +31,7 @@ curl -s $API/people/$PERSON/inbox
 | `POST /accounts/{id}/uploads`, `DELETE /imports/{id}` | Import a statement (multipart `file`, optional `password`); remove one |
 | `GET/POST /categories`, `PATCH/DELETE /categories/{id}`, `POST /categories/{id}/merge`, `POST /categories/{id}/retire` | Categories with their descriptions |
 | `GET /transactions` (filters: `account_id`, `category_id`, `month`, `q`), `PATCH /transactions/{id}/category` (`account_id`), `POST /transactions/{id}/ignore` | Browse and correct |
+| `GET /transactions/{id}/card-options`, `POST /transactions/{id}/card-payment` (`card_id`), `POST /transactions/{id}/card-payment/undo` (`account_id`, `origin`) | Which cards a bank row could have paid (empty when it cannot be a card payment), record it as a payment to one (the card's balance drops at once; returns `previous` so a mistake can be put back, and `matched` when the card's statement already showed it), and put it back (409 once the card's statement has matched it) |
 | `POST /categorization/retry` | Categorize Uncategorized rows again |
 | `GET/POST /rules`, `PATCH/DELETE /rules/{id}`, `POST /rules/reorder`, `POST /rules/{id}/apply` | Owner rules, in the order they are checked; apply one to existing rows |
 | `POST /rules/preview`, `POST /rules/match-count`, `GET /transactions/{id}/rule-suggestion` | What a rule would match before you save it, and a suggested rule for a transaction |

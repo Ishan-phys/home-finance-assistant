@@ -18,6 +18,7 @@ from uuid import UUID
 
 from cfo.core.chart import DEFAULT_CATEGORIES, IN_TRANSIT
 from cfo.core.dates import month_bounds, month_key, previous_month
+from cfo.core.errors import NotFoundError
 from cfo.core.ids import Id
 from cfo.core.money import format_inr
 from cfo.core.types import (
@@ -43,6 +44,7 @@ from cfo.ledger.repositories.accounts import (
 from cfo.ledger.repositories.transactions import JournalRepository
 from cfo.metrics.balance_sheet import BalanceSheet, balance_sheet
 from cfo.metrics.balances import balances_at
+from cfo.metrics.card_payments import card_choices, payable_amount
 from cfo.metrics.inbox import inbox
 from cfo.metrics.income_statement import CategoryLine, check_line, income_statement
 from cfo.metrics.leaks import leaks
@@ -349,6 +351,7 @@ def inbox_report(data: Data) -> list[Json]:
     for item in inbox(data.accounts, data.transactions, data.assertions, data.imports):
         who = data.name(item.account_id)
         amount = format_inr(item.amount)
+        pay_card = False
         if item.kind == "uncategorized":
             t = by_id[item.transaction_id] if item.transaction_id else None
             text = f"{amount} · {t.payee if t else ''} on {who} needs a category"
@@ -364,6 +367,7 @@ def inbox_report(data: Data) -> list[Json]:
                 else f"{amount} arrived in {who} from an account of yours; upload the other side"
             )
             action = "pair"
+            pay_card = left and t is not None and payable_amount(data.accounts, t) is not None
         elif item.kind == "gap":
             gap = next(
                 g
@@ -374,7 +378,13 @@ def inbox_report(data: Data) -> list[Json]:
             text = f"{who} is {amount} {way} its statement on {day(item.date)}; upload the missing statement"
             action = "upload"
         else:
-            text = f"{who} bill of {amount} is due on {day(item.date)}"
+            if item.due is not None and item.due != item.amount:
+                text = (
+                    f"{amount} of the {format_inr(item.due)} {who} bill is still due on "
+                    f"{day(item.date)}"
+                )
+            else:
+                text = f"{who} bill of {amount} is due on {day(item.date)}"
             action = "upload"
         out.append(
             {
@@ -385,9 +395,33 @@ def inbox_report(data: Data) -> list[Json]:
                 "transaction_id": item.transaction_id,
                 "text": text,
                 "action": action,
+                "pay_card": pay_card,
             }
         )
     return out
+
+
+@json_safe
+def card_options_report(data: Data, tx_id: Id) -> Json:
+    """The cards a bank row could have paid, likeliest first. Empty when it cannot be a card
+    payment, so the cockpit offers nothing there."""
+    tx = next((t for t in data.transactions if t.id == tx_id), None)
+    if tx is None:
+        raise NotFoundError(f"unknown transaction {tx_id}")
+    amount = payable_amount(data.accounts, tx)
+    return {
+        "amount": money(amount) if amount is not None else None,
+        "cards": [
+            {
+                "id": c.account_id,
+                "name": data.name(c.account_id),
+                "owed": money(c.owed),
+                "suggested": c.suggested,
+                "current": c.current,
+            }
+            for c in card_choices(data.accounts, data.transactions, data.imports, tx)
+        ],
+    }
 
 
 @json_safe
@@ -443,6 +477,11 @@ def transaction_json(data: Data, t: Transaction) -> Json:
                 "path": a.path,
                 "uncategorized": a.role is AccountRole.SYSTEM,
             }
+    paid_card = None
+    if len(counter) == 1 and counter[0].origin is Origin.OWNER:
+        card = data.account(counter[0].account_id)
+        if card is not None and card.role is AccountRole.REAL:
+            paid_card = {"id": card.id, "name": card.display_name}  # waiting for its statement
     return {
         "id": t.id,
         "date": t.date,
@@ -453,6 +492,7 @@ def transaction_json(data: Data, t: Transaction) -> Json:
         "from": _side(data, negative.account_id),
         "to": _side(data, positive.account_id),
         "category": category,
+        "card_payment": paid_card,
         "editable": len([p for p in t.postings if p.origin is Origin.OBSERVED]) == 1
         and len(counter) == 1,
         "postings": [

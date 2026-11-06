@@ -261,6 +261,31 @@ class JournalRepository(ScopedRepository):
         )
         self.delete(other_tx)
 
+    def adopt_statement_line(self, recorded_tx: Id, line_tx: Id, card_id: Id) -> None:
+        """The card's own statement line replaces the payment the owner recorded against it: the
+        recorded card posting goes, the line's observed posting moves in, and the line's
+        transaction (now holding only its money-in-transit guess) is deleted. The card's balance
+        is unchanged and the transaction still sums to zero."""
+        self.s.execute(
+            delete(PostingRow).where(
+                PostingRow.transaction_id == recorded_tx,
+                PostingRow.account_id == card_id,
+                PostingRow.origin == Origin.OWNER.value,
+                PostingRow.ledger_id == self.ledger_id,
+            )
+        )
+        self.s.execute(
+            update(PostingRow)
+            .where(
+                PostingRow.transaction_id == line_tx,
+                PostingRow.account_id == card_id,
+                PostingRow.origin == Origin.OBSERVED.value,
+                PostingRow.ledger_id == self.ledger_id,
+            )
+            .values(transaction_id=recorded_tx)
+        )
+        self.delete(line_tx)
+
 
 def _mapping(r: MerchantMappingRow) -> MerchantMapping:
     return MerchantMapping(

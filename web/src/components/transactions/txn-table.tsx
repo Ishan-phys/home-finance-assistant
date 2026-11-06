@@ -77,7 +77,9 @@ export function TxnTable({ rows, running = false }: { rows: Txn[]; running?: boo
                         txnId={t.id}
                         narration={t.original ?? t.narration}
                         current={
-                          t.category && !t.category.uncategorized
+                          t.card_payment
+                            ? `Paid to ${t.card_payment.name} · awaiting statement`
+                            : t.category && !t.category.uncategorized
                             ? t.category.name
                             : t.postings.some((p) => p.path === "Assets:InTransit")
                               ? "Own account: waiting"

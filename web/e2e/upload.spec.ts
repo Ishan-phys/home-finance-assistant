@@ -100,3 +100,62 @@ test("an account added twice can be deleted, and the other one stays", async ({ 
   await expect(page.locator(`a[href="/accounts/${extra}"]`)).toHaveCount(0);
   await expect(page.locator(`a[href="/accounts/${keep}"]`).first()).toBeVisible();
 });
+
+async function setUpBillPayment(page: Page, request: Parameters<typeof createPerson>[0]) {
+  const person = await createPerson(request);
+  const savings = await createAccount(request, person, { name: "HDFC Savings", type: "savings", institution: "HDFC Bank" });
+  await createAccount(request, person, { name: "Axis Flipkart", type: "credit_card", institution: "Axis Bank" });
+  await createAccount(request, person, { name: "HDFC Swiggy", type: "credit_card", institution: "HDFC Bank" });
+  await completeSetup(request, person);
+  await page.goto(`/accounts/${savings}?upload=1`);
+  const dialog = page.getByRole("dialog", { name: "Upload a statement" });
+  await dialog.getByLabel("Statement file").setInputFiles(fixture("hdfc_bank_sep.csv"));
+  await dialog.getByRole("button", { name: "Upload" }).click();
+  await expect(dialog).toContainText("9 rows added");
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await page.goto("/inbox");
+  await makeOwnMove(page, /BILLPAY|Card bill|16,268/);
+  return page.getByRole("list", { name: "Inbox" }).getByRole("listitem").filter({ hasText: "₹16,268.00 left HDFC Savings" });
+}
+
+test("pay a card from the inbox: a wrong pick is undone, the right one is recorded", async ({ page, request }) => {
+  const row = await setUpBillPayment(page, request);
+  await expect(row).toBeVisible();
+
+  // The wrong card by mistake: the row leaves the inbox and an Undo appears.
+  await row.getByRole("button", { name: "Pay a card" }).click();
+  const dialog = page.getByRole("dialog", { name: "Which card did this pay?" });
+  await dialog.getByRole("button", { name: /HDFC Swiggy/ }).click();
+  const note = page.getByRole("status");
+  await expect(note).toContainText("₹16,268.00 recorded as a payment to HDFC Swiggy");
+  await expect(note).toContainText("You can undo this for");
+  await expect(row).toHaveCount(0);
+
+  // Undo puts it back exactly as it was.
+  await note.getByRole("button", { name: "Undo" }).click();
+  await expect(note).toContainText("Undone");
+  await expect(row).toBeVisible();
+
+  // The right card. The Transactions page then says the payment is waiting for the statement.
+  await row.getByRole("button", { name: "Pay a card" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /Axis Flipkart/ }).click();
+  await expect(page.getByRole("status")).toContainText("recorded as a payment to Axis Flipkart");
+  await expect(row).toHaveCount(0);
+  await page.goto("/transactions");
+  await expect(page.getByText("Paid to Axis Flipkart · awaiting statement")).toBeVisible();
+});
+
+test("the offer to undo a card payment ends after 45 seconds", async ({ page, request }) => {
+  await page.clock.install();
+  const row = await setUpBillPayment(page, request);
+  await row.getByRole("button", { name: "Pay a card" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /Axis Flipkart/ }).click();
+  const note = page.getByRole("status");
+  await expect(note.getByRole("button", { name: "Undo" })).toBeVisible();
+  await page.clock.fastForward(30_000);
+  await expect(note.getByRole("button", { name: "Undo" })).toBeVisible();
+  await page.clock.fastForward(20_000);
+  await expect(note).toHaveCount(0);
+  await page.goto("/transactions");
+  await expect(page.getByText("Paid to Axis Flipkart · awaiting statement")).toBeVisible();
+});
