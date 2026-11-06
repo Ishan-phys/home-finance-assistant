@@ -82,3 +82,21 @@ test("an account with no statements says how to start", async ({ page, request }
   await page.goto("/inbox");
   await expect(page.getByText("All caught up.")).toBeVisible();
 });
+
+test("an account added twice can be deleted, and the other one stays", async ({ page, request }) => {
+  const person = await createPerson(request);
+  const keep = await createAccount(request, person, { name: "SBI Savings", type: "savings", institution: "State Bank of India" });
+  const extra = await createAccount(request, person, { name: "SBI Savings", type: "savings", institution: "State Bank of India" });
+  await completeSetup(request, person);
+
+  await page.goto(`/accounts/${extra}`);
+  await page.getByRole("button", { name: "Delete account" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("0 transactions");
+  await expect(dialog).toContainText("0 uploaded statements");
+  await dialog.getByRole("button", { name: "Delete account" }).click();
+
+  await expect(page).toHaveURL(/\/accounts$/);
+  await expect(page.locator(`a[href="/accounts/${extra}"]`)).toHaveCount(0);
+  await expect(page.locator(`a[href="/accounts/${keep}"]`).first()).toBeVisible();
+});

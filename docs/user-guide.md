@@ -197,6 +197,12 @@ movement from another account, and how many need a category.
 **Removing a statement** (account page, **Statements** tab, **Remove**) takes out its rows and its
 balance. A transfer it completed goes back to waiting for its other side.
 
+**Deleting an account** (account page, **Delete account**) is for an account you added by mistake,
+such as one added twice. The dialog says how many transactions and statements will go. They are
+removed with the account, and a movement it shared with another account stays on that account,
+waiting for its other side. Your other accounts are not changed. It cannot be undone, but you can
+add the account again and upload its statements.
+
 ## 6. The Inbox
 
 | Item | What to do |
