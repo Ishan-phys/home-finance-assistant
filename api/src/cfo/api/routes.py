@@ -15,11 +15,12 @@ from cfo.api.originals import attach_originals
 from cfo.api.rules_routes import add_rule_routes
 from cfo.api.sample import default_seed_client, load_sample
 from cfo.core.errors import ConflictError, NotFoundError
-from cfo.core.types import AccountRole, AccountType, Direction, Scope
+from cfo.core.types import AccountRole, AccountType, Direction, Origin, Scope
 from cfo.ingest.masking import build_masker
 from cfo.ingest.retry import retry_categorization
 from cfo.ingest.upload import upload_statement
 from cfo.ledger import reports
+from cfo.ledger.card_payments import pay_card, undo_card_payment
 from cfo.ledger.journal import ignore, recategorize, remove_import, revalue
 from cfo.ledger.repositories.accounts import (
     AccountRepository,
@@ -92,6 +93,17 @@ class MergeIn(BaseModel):
 
 class RecategorizeIn(BaseModel):
     account_id: UUID
+
+
+class CardPaymentIn(BaseModel):
+    card_id: UUID
+
+
+class UndoCardPaymentIn(BaseModel):
+    """What the row's other side was before the card was picked, as `card-payment` returned it."""
+
+    account_id: UUID
+    origin: Origin
 
 
 class SettingsPatch(BaseModel):
@@ -384,6 +396,31 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
     def change_category(scope: ScopeDep, tx_id: UUID, body: RecategorizeIn) -> Json:
         with db.transaction(scope) as s:
             return {"changed": recategorize(s, tx_id, body.account_id)}
+
+    @r.get("/transactions/{tx_id}/card-options")
+    def card_options(scope: ScopeDep, tx_id: UUID) -> Json:
+        with db.transaction(scope) as s:
+            return reports.card_options_report(data(s), tx_id)
+
+    @r.post("/transactions/{tx_id}/card-payment")
+    def record_card_payment(scope: ScopeDep, tx_id: UUID, body: CardPaymentIn) -> Json:
+        with db.transaction(scope) as s:
+            paid = pay_card(s, tx_id, body.card_id)
+            card = AccountRepository(s).get(body.card_id)
+        return {
+            "card": card.display_name if card else "",
+            "matched": paid.matched,
+            "previous": {
+                "account_id": str(paid.previous.account_id),
+                "origin": paid.previous.origin,
+            },
+        }
+
+    @r.post("/transactions/{tx_id}/card-payment/undo")
+    def undo_card_payment_route(scope: ScopeDep, tx_id: UUID, body: UndoCardPaymentIn) -> Json:
+        with db.transaction(scope) as s:
+            undo_card_payment(s, tx_id, body.account_id, body.origin)
+        return {"undone": True}
 
     @r.post("/transactions/{tx_id}/ignore")
     def ignore_row(scope: ScopeDep, tx_id: UUID) -> Json:

@@ -154,12 +154,17 @@ def apply_to_uncategorized(s: Session, mappings: Mapping[str, MerchantMapping]) 
 
 
 def pair_in_transit(s: Session) -> int:
-    """Merge every pair of own-account halves in the ledger into one transaction."""
+    """Merge every pair of own-account halves in the ledger into one transaction. Payments the
+    owner recorded against a card are matched with the card's statement first, so a statement
+    line cannot be taken by an unrelated debit of the same amount."""
+    from cfo.ledger.card_payments import adopt_card_payments  # noqa: PLC0415  (it imports us)
+
+    adopted = adopt_card_payments(s)
     journal = JournalRepository(s)
     pairs = find_pairs(journal.in_transit_halves())
     for out_tx, into_tx in pairs:
         journal.merge(out_tx, into_tx)
-    return len(pairs)
+    return len(pairs) + adopted
 
 
 def _load(s: Session, tx_id: Id) -> Transaction:

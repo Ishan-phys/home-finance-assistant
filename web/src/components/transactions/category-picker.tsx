@@ -5,7 +5,8 @@ import { ErrorNote } from "@/components/common/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { api, type Categories, type RuleSuggestion } from "@/lib/api";
+import { api, type Categories, type CardOptions, type RuleSuggestion } from "@/lib/api";
+import { CardChoices } from "./card-payment";
 import { usePerson } from "@/lib/person";
 import { useAction, useApi } from "@/lib/use-api";
 
@@ -27,6 +28,7 @@ export function CategoryPicker({ txnId, current, narration }: { txnId: string; c
   const [edited, setEdited] = useState<string | null>(null);
   const [matches, setMatches] = useState<number | null>(null);
   const cats = useApi<Categories>(open ? "/categories" : null, version);
+  const cards = useApi<CardOptions>(open ? `/transactions/${txnId}/card-options` : null, version);
   const suggestion = useApi<RuleSuggestion>(open && always ? `/transactions/${txnId}/rule-suggestion` : null, version);
   const { run, error, busy } = useAction(refresh);
 
@@ -54,6 +56,8 @@ export function CategoryPicker({ txnId, current, narration }: { txnId: string; c
         { title: "Between your accounts", items: cats.data.own_move?.id ? [cats.data.own_move] : [] },
       ]
     : [];
+
+  const cardList = cards.data ? { ...cards.data, cards: cards.data.cards.filter((c) => !q || c.name.toLowerCase().includes(q) || "pay a credit card".includes(q)) } : null;
 
   async function choose(c: Choice) {
     const done = await run(async () => {
@@ -125,6 +129,17 @@ export function CategoryPicker({ txnId, current, narration }: { txnId: string; c
             );
           })}
         </div>
+        {cardList?.cards.length ? (
+          <div>
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">Pay a credit card</p>
+            <CardChoices txnId={txnId} options={cardList} disabled={always} onDone={() => setOpen(false)} />
+            {always ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                A card payment is recorded one at a time, so it cannot be an &quot;always&quot; rule.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <ErrorNote message={error} />
       </DialogContent>
     </Dialog>

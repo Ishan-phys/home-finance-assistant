@@ -49,7 +49,9 @@ unlock -> read -> redact -> parse -> categorize -> journal
    Rules win over a mapping only the model made, never over a choice the owner made by hand.
 5. **Journal** (`cfo-ledger`): in one database transaction, rows become balanced transactions,
    the two halves of a move between the owner's own accounts pair into one transfer, and the
-   statement's closing balance becomes an assertion the books are checked against.
+   statement's closing balance becomes an assertion the books are checked against. A payment the
+   owner already recorded against a card (before its statement existed) is matched first, by card
+   and exact amount, and the statement's line replaces it.
 
 ## Packages
 

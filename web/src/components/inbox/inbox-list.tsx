@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Amount, EmptyState, ErrorNote, Loading, shortDate } from "@/components/common/shared";
 import { CategoryPicker } from "@/components/transactions/category-picker";
+import { PayCardButton } from "@/components/transactions/card-payment";
 import { Button } from "@/components/ui/button";
 import { api, type InboxItem } from "@/lib/api";
 import { usePerson } from "@/lib/person";
@@ -56,6 +57,9 @@ export function InboxList({ limit }: { limit?: number }) {
             <Button variant="outline" size="sm" render={<Link href={`/accounts/${item.account.id}?upload=1`} />}>
               Upload
             </Button>
+          ) : null}
+          {item.action === "pair" && item.pay_card && item.transaction_id ? (
+            <PayCardButton txnId={item.transaction_id} narration={item.original} />
           ) : null}
           {item.action === "pair" && item.account ? (
             <Button variant="ghost" size="sm" render={<Link href={`/accounts/${item.account.id}`} />}>

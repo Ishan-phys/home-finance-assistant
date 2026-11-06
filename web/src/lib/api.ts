@@ -124,6 +124,8 @@ export interface Txn {
   from: Side;
   to: Side;
   category: { id: string; name: string; path: string; uncategorized: boolean } | null;
+  /** Recorded as a payment to this card; its own statement has not shown it yet. */
+  card_payment: { id: string; name: string } | null;
   editable: boolean;
   postings: Posting[];
   change?: Money;
@@ -162,6 +164,30 @@ export interface InboxItem {
   original: string | null;
   text: string;
   action: "categorize" | "upload" | "pair";
+  /** Money left a bank account for something not yet known, so a card can be picked. */
+  pay_card: boolean;
+}
+
+export interface CardOption {
+  id: string;
+  name: string;
+  owed: Money;
+  /** The payment equals what the card owes, or what is left of its bill. */
+  suggested: boolean;
+  /** The row is already recorded as a payment to this card. */
+  current: boolean;
+}
+
+export interface CardOptions {
+  amount: Money | null;
+  cards: CardOption[];
+}
+
+export interface CardPaid {
+  card: string;
+  /** The card's statement already had this payment, so there is nothing to undo. */
+  matched: boolean;
+  previous: { account_id: string; origin: string };
 }
 
 export interface RuleItem {
