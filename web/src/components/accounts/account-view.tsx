@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api, type AccountPage, type Statement } from "@/lib/api";
 import { usePerson } from "@/lib/person";
 import { useAction, useApi } from "@/lib/use-api";
+import { DeleteAccountDialog } from "./delete-account-dialog";
 import { UploadDialog } from "./upload-dialog";
 import { ValueDialog } from "./value-dialog";
 
@@ -58,6 +59,7 @@ export function AccountView({ id }: { id: string }) {
   const page = useApi<AccountPage>(`/accounts/${id}`, version);
   const [uploading, setUploading] = useState(params.get("upload") === "1");
   const [valuing, setValuing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   if (!page.data) return page.error ? <ErrorNote message={page.error} /> : <Loading what="account" />;
   const { account, register, statements, holdings } = page.data;
@@ -78,15 +80,22 @@ export function AccountView({ id }: { id: string }) {
                 "Upload a statement to add its transactions. Uploading the exact same file twice adds nothing new.",
                 "A statement is checked against its closing balance. A mismatch means a transaction is missing or wrong.",
                 "Remove a statement to take its transactions back out.",
+                "Delete account removes the whole account, for example one you added twice.",
               ]
-            : ["Use Update value whenever the balance changes. There are no statements for this kind of account."],
+            : [
+                "Use Update value whenever the balance changes. There are no statements for this kind of account.",
+                "Delete account removes the whole account, for example one you added twice.",
+              ],
         }}
         action={
-          feed ? (
-            <Button onClick={() => setUploading(true)}>Upload statement</Button>
-          ) : (
-            <Button onClick={() => setValuing(true)}>Update value</Button>
-          )
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => setDeleting(true)}>Delete account</Button>
+            {feed ? (
+              <Button onClick={() => setUploading(true)}>Upload statement</Button>
+            ) : (
+              <Button onClick={() => setValuing(true)}>Update value</Button>
+            )}
+          </div>
         }
       />
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
@@ -157,6 +166,13 @@ export function AccountView({ id }: { id: string }) {
         onUploaded={refresh}
       />
       <ValueDialog accountId={account.id} open={valuing} onOpenChange={setValuing} onSaved={refresh} />
+      <DeleteAccountDialog
+        accountId={account.id}
+        accountName={account.name}
+        institution={account.institution}
+        open={deleting}
+        onOpenChange={setDeleting}
+      />
     </div>
   );
 }
