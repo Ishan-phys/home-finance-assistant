@@ -30,6 +30,14 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8000:8000"
+    # The API runs migrations before it listens, so allow time for them. Probes the same /health route the
+    # admin page uses. (The image has no curl, so the probe uses Python, which the image does have.)
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
 
   web:
     build:
@@ -40,6 +48,12 @@ services:
       - api
     ports:
       - "127.0.0.1:3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
 volumes:
   dbdata:
