@@ -90,3 +90,26 @@ def test_household_scope_and_membership(database: Database) -> None:
 def test_unknown_person_has_no_scope(database: Database) -> None:
     with database.transaction() as s:
         assert PeopleRepository(s).scope_of(new_id()) is None
+
+
+def test_deleting_a_person_removes_their_ledger_and_leaves_everyone_else_alone(
+    database: Database,
+) -> None:
+    (asha, a_scope), (ben, b_scope) = two_people(database)
+    with database.transaction(a_scope) as s:
+        AccountRepository(s).add(cat("Expenses:Food"))
+    with database.transaction() as s:
+        households = HouseholdRepository(s)
+        home = households.create("Home")
+        households.add_member(home.id, asha.id, on=D("2026-01-01"))
+        ledger_id = PeopleRepository(s).delete(asha.id)
+    assert ledger_id == next(iter(a_scope.ledger_ids))
+    with database.transaction() as s:
+        people = PeopleRepository(s)
+        names = [p.name for p, _ in people.list_all()]
+        assert "Ben Mills" in names and "Asha Rao" not in names
+        assert people.get(asha.id) is None
+        with pytest.raises(KeyError):
+            people.delete(asha.id)
+    with database.transaction(b_scope) as s:
+        assert RedactionTermRepository(s).list_all() == ["Ben Mills", "Ben", "Mills"]

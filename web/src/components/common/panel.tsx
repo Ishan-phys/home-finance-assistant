@@ -14,9 +14,9 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section aria-label={title} className={cn("rounded-xl border bg-card p-4", className)}>
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
+    <section aria-label={title} className={cn("surface rounded-2xl border bg-card p-5", className)}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-sans text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
         {action}
       </div>
       {children}

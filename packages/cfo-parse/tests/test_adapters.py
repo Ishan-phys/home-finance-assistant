@@ -48,6 +48,40 @@ def test_sbi_xlsx_layout_and_wrap_join() -> None:
     assert (p.closing_balance, p.balance_as_of) == (265_181_40, d("2026-09-30"))
 
 
+def test_sbi_netbanking_xls_headers_and_footer() -> None:
+    from cfo.doc import Document
+
+    doc = Document.sheet(
+        [
+            ["Account Name :", "ASHA RAO"],
+            [],
+            [
+                "Txn Date",
+                "Value Date",
+                "Description",
+                "Ref No./Cheque No.",
+                "Debit",
+                "Credit",
+                "Balance",
+            ],
+            ["01/09/2026", "01/09/2026", "UPI TEST CAFE", "123", "105.00", " ", "1000.00"],
+            ["02/09/2026", "02/09/2026", "SALARY", "124", " ", "500.00", "1500.00"],
+            [
+                "Computer generated statement, no signature needed",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            ],
+        ]
+    )
+    p = ADAPTERS["sbi_bank"].parse(doc)
+    assert [r.amount for r in p.rows] == [-105_00, 500_00]
+    assert p.closing_balance == 1500_00
+
+
 def test_cp1252_csv_fallback() -> None:
     body = "Statement From : 01/09/2026 To : 30/09/2026\nTxn Date,Narration,Withdrawals,Deposits,Closing Balance\n"
     body += "01/09/2026,CAFÉ,10.00,,90.00\n"

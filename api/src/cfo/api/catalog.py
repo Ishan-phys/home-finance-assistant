@@ -20,8 +20,8 @@ _INSTITUTIONS: dict[str, dict[AccountType, tuple[str, str]]] = {
         T.CREDIT_CARD: ("hdfc_credit_card", "Billed card statement, .xls or .xlsx"),
     },
     "SBI": {
-        T.SAVINGS: ("sbi_bank", "Account statement, .xlsx or .csv"),
-        T.CURRENT: ("sbi_bank", "Account statement, .xlsx or .csv"),
+        T.SAVINGS: ("sbi_bank", "Account statement, .xls, .xlsx or .csv"),
+        T.CURRENT: ("sbi_bank", "Account statement, .xls, .xlsx or .csv"),
     },
     "Axis Bank": {T.CREDIT_CARD: ("axis_credit_card", "Monthly card statement, PDF")},
     "Groww": {

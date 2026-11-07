@@ -184,6 +184,17 @@ def build_router(deps: Deps, chats: ChatRegistry) -> APIRouter:
                 for p, led in PeopleRepository(s).list_all()
             ]
 
+    @top.delete("/people/{person_id}", status_code=204)
+    def delete_person(person_id: UUID) -> Response:
+        """Delete a person and everything in their ledger. It cannot be undone."""
+        with db.transaction() as s:
+            try:
+                ledger_id = PeopleRepository(s).delete(person_id)
+            except KeyError:
+                raise NotFoundError(f"unknown person {person_id}") from None
+        chats.forget(ledger_id)  # their chat sessions live in memory only
+        return Response(status_code=204)
+
     @top.post("/sample", status_code=201)
     def sample() -> Json:
         result = load_sample(db, today(), default_seed_client())

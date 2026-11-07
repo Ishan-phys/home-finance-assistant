@@ -130,7 +130,7 @@ export function RulesPage() {
   const action = useAction(refresh);
 
   if (!rules.data || !cats.data) {
-    return rules.error || cats.error ? <ErrorNote message={rules.error ?? cats.error} /> : <Loading what="rules" />;
+    return rules.error || cats.error ? <ErrorNote message={rules.error ?? cats.error} /> : <Loading what="rules" page />;
   }
   const list = rules.data;
 

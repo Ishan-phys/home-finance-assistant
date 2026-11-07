@@ -97,7 +97,7 @@ export function UploadDialog({
             {needsPassword ? (
               <div className="space-y-1">
                 <Label htmlFor="statement-password">File password</Label>
-                <Input id="statement-password" type="password" autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input id="statement-password" type="password" autoComplete="off" autoFocus value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             ) : null}
             <ErrorNote message={error} />

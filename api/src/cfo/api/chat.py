@@ -35,6 +35,11 @@ class ChatRegistry:
             self._services[scope.ledger_ids] = ChatService(self.db, self.clock, self.model, scope)
         return self._services[scope.ledger_ids]
 
+    def forget(self, ledger_id: Id) -> None:
+        """Drop the chat sessions of a ledger that no longer exists."""
+        for key in [k for k in self._services if ledger_id in k]:
+            del self._services[key]
+
 
 def add_chat_routes(router: APIRouter, chats: ChatRegistry) -> None:
     @router.post("/chat")

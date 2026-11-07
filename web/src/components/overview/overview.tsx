@@ -20,7 +20,7 @@ export function OverviewPage() {
   const sheet = useApi<BalanceSheet>("/reports/balance-sheet", version);
   const firstFeed = (sheet.data?.groups ?? []).flatMap((g) => g.accounts).find((a) => a.role === "real" && a.binding);
 
-  if (!view.data) return view.error ? <ErrorNote message={view.error} /> : <Loading what="your overview" />;
+  if (!view.data) return view.error ? <ErrorNote message={view.error} /> : <Loading what="your overview" page />;
   const { net_worth, this_month, safe_to_spend: sts, inbox } = view.data;
   const change = net_worth.change_since_last_month;
 
@@ -44,16 +44,16 @@ export function OverviewPage() {
           ) : null
         }
       />
-      <div className="grid gap-4 md:grid-cols-3">
-        <Panel title="Net worth" action={<Link href="/accounts" className="text-xs text-muted-foreground hover:underline">Breakdown</Link>}>
-          <p className="text-3xl font-semibold tracking-tight tabular-nums">{net_worth.total.formatted}</p>
+      <div className="reveal grid gap-4 md:grid-cols-3">
+        <Panel title="Net worth" action={<Link href="/accounts" className="-m-2 rounded-md p-2 text-xs font-medium text-primary underline-offset-4 hover:underline">Breakdown</Link>}>
+          <p className="font-figure text-4xl font-medium">{net_worth.total.formatted}</p>
           <p className="mt-1 text-xs text-muted-foreground">
             {change.paise === 0 ? "No change" : `${change.paise > 0 ? "Up" : "Down"} ${change.formatted.replace("-", "")}`} since last month
           </p>
           <p className="mt-2 text-xs text-muted-foreground">What you own, less what you owe on cards and loans.</p>
         </Panel>
 
-        <Panel title="Money in and out" action={<Link href="/spending" className="text-xs text-muted-foreground hover:underline">{monthName(this_month.month)}</Link>}>
+        <Panel title="Money in and out" action={<Link href="/spending" className="-m-2 rounded-md p-2 text-xs font-medium text-primary underline-offset-4 hover:underline">{monthName(this_month.month)}</Link>}>
           <dl className="space-y-1.5 text-sm">
             {(
               [
@@ -64,7 +64,7 @@ export function OverviewPage() {
             ).map(([label, value]) => (
               <div key={label} className="flex items-baseline justify-between">
                 <dt className="text-muted-foreground">{label}</dt>
-                <dd className={label === "Saved" ? "text-lg font-semibold" : ""}>
+                <dd className={label === "Saved" ? "font-figure text-xl font-medium" : ""}>
                   <Amount value={value} />
                 </dd>
               </div>
@@ -73,7 +73,7 @@ export function OverviewPage() {
         </Panel>
 
         <Panel title="Safe to spend">
-          <p className="text-3xl font-semibold tracking-tight tabular-nums">{sts.amount.formatted}</p>
+          <p className="font-figure text-4xl font-medium">{sts.amount.formatted}</p>
           <details className="mt-2 text-sm">
             <summary className="cursor-pointer text-xs text-muted-foreground">How is this worked out?</summary>
             <dl className="mt-2 space-y-1">
@@ -107,7 +107,7 @@ export function OverviewPage() {
         className="mt-4"
         action={
           inbox.count > 3 ? (
-            <Link href="/inbox" className="text-xs text-muted-foreground hover:underline">See all {inbox.count}</Link>
+            <Link href="/inbox" className="-m-2 rounded-md p-2 text-xs font-medium text-primary underline-offset-4 hover:underline">See all {inbox.count}</Link>
           ) : null
         }
       >

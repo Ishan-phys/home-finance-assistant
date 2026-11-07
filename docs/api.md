@@ -40,7 +40,7 @@ curl -s $API/people/$PERSON/inbox
 | `GET/PUT /privacy/terms`, `GET /privacy/preview`, `GET/PUT /privacy/labels` | Redaction controls |
 | `POST /chat` | Server-sent events; send `{"message": "…"}` |
 
-Top-level: `GET/POST /people`, `POST /sample`, `GET /catalog`, `GET /health`. Amounts are
+Top-level: `GET/POST /people`, `DELETE /people/{person_id}` (removes the person and their whole ledger; `204`, or `404` if unknown), `POST /sample`, `GET /catalog`, `GET /health`. Amounts are
 `{"paise": 1234500, "formatted": "₹12,345.00"}`. Errors are `{"error": {"code", "message",
 "hint", "detail", "correlation_id"}}` (`message` and `hint` are plain language, `detail` is the
 technical reason) with one of `PARSE_FAILED`, `VALIDATION_FAILED`, `INVALID_INPUT`, `NOT_FOUND`,

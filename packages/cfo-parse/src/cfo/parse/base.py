@@ -225,6 +225,13 @@ class BankStatementAdapter:
                     break
                 continue
             date_cell = cells[cols["date"]]
+            # Banks print totals or a disclaimer under the table: once rows have started, a line
+            # with no amount and no date is that footer, not a transaction.
+            if started and is_blank(cells[cols["debit"]]) and is_blank(cells[cols["credit"]]):
+                try:
+                    parse_date(date_cell)
+                except ValidationFailed:
+                    break
             if is_blank(date_cell):
                 raise ValidationFailed(f"row {offset}: missing date")
             posted = parse_date(date_cell)
