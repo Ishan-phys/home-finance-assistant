@@ -2,7 +2,7 @@
 
 import { ArrowLeftRight, BookOpen, Inbox, LayoutDashboard, ListFilter, LogOut, PieChart, Plus, Settings, Sparkles, Tags } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Amount } from "@/components/common/shared";
 import type { BalanceSheet, InboxItem } from "@/lib/api";
@@ -32,8 +32,10 @@ function NavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
-        active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors md:py-1.5",
+        active
+          ? "bg-accent font-medium text-accent-foreground before:absolute before:left-0 before:top-1/2 before:h-4 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-primary"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       <span className="[&_svg]:size-4">{icon}</span>
@@ -52,13 +54,23 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
   const sheet = useApi<BalanceSheet>("/reports/balance-sheet", version);
   const inbox = useApi<InboxItem[]>("/inbox", version);
   const path = usePathname();
+  const router = useRouter();
   const [signOutFailed, setSignOutFailed] = useState(false);
 
   return (
     <nav aria-label="Main" className="flex h-full flex-col gap-4 overflow-y-auto px-3 py-4">
       <div className="px-2.5">
-        <p className="text-sm font-semibold">AI CFO</p>
-        {people && person ? <PersonSwitcher people={people} current={person.id} onSelect={select} /> : null}
+        <p className="font-heading text-lg font-medium tracking-tight">AI CFO</p>
+        {people && person ? <PersonSwitcher
+            people={people}
+            current={person.id}
+            onSelect={(id) => {
+              select(id);
+              // An account, and anything else with an id in its address, belongs to one person's
+              // ledger: staying on it after a switch asks the new ledger for a record it lacks.
+              if (path.startsWith("/accounts/")) router.push("/accounts");
+            }}
+          /> : null}
       </div>
 
       <div className="space-y-0.5">
@@ -92,8 +104,8 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
                         href={`/accounts/${a.id}`}
                         aria-current={path === `/accounts/${a.id}` ? "page" : undefined}
                         className={cn(
-                          "flex items-baseline justify-between gap-2 rounded-lg px-2.5 py-1 text-sm hover:bg-muted/60",
-                          path === `/accounts/${a.id}` && "bg-muted font-medium",
+                          "flex items-baseline justify-between gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted",
+                          path === `/accounts/${a.id}` && "bg-accent font-medium text-accent-foreground",
                         )}
                       >
                         <span className="truncate">{a.name}</span>
@@ -116,7 +128,7 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
         <button
           type="button"
           onClick={onAsk}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:py-1.5"
         >
           <Sparkles className="size-4" />
           Ask
@@ -129,7 +141,7 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
             if (res?.ok) window.dispatchEvent(new Event(SIGNED_OUT_EVENT));
             else setSignOutFailed(true);
           }}
-          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+          className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:py-1.5"
         >
           <LogOut className="size-4" />
           Sign out

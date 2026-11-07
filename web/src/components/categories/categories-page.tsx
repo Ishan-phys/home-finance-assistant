@@ -59,7 +59,7 @@ export function CategoriesPage() {
   const [merging, setMerging] = useState<Category | null>(null);
   const action = useAction(refresh);
 
-  if (!cats.data) return cats.error ? <ErrorNote message={cats.error} /> : <Loading what="categories" />;
+  if (!cats.data) return cats.error ? <ErrorNote message={cats.error} /> : <Loading what="categories" page />;
   const data = cats.data;
 
   const actions = (c: Category) => (

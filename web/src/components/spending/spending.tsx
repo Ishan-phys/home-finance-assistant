@@ -56,7 +56,7 @@ export function SpendingPage() {
   const month = stmt.data?.month ?? asked;
   const leaks = useApi<Leaks>(month ? `/reports/leaks?month=${month}` : null, version);
 
-  if (!stmt.data || !month) return stmt.error ? <ErrorNote message={stmt.error} /> : <Loading what="spending" />;
+  if (!stmt.data || !month) return stmt.error ? <ErrorNote message={stmt.error} /> : <Loading what="spending" page />;
   const s = stmt.data;
   const out = s.categories.out.filter((n) => !n.path.startsWith("Expenses:People"));
   const max = Math.max(0, ...out.map((n) => Math.abs(n.amount.paise)));

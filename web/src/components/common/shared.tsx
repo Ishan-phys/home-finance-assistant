@@ -1,6 +1,6 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { AlertCircle, Info } from "lucide-react";
 import { useSyncExternalStore, type ReactNode } from "react";
 import type { Money } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -22,8 +22,8 @@ export function Stat({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={cn("text-xl font-semibold tabular-nums", tone === "muted" && "text-muted-foreground")}>
+      <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={cn("font-figure text-2xl font-medium", tone === "muted" && "text-muted-foreground")}>
         {value}
       </div>
       {hint ? <div className="text-xs text-muted-foreground">{hint}</div> : null}
@@ -34,8 +34,9 @@ export function Stat({
 export function ErrorNote({ message }: { message: string | null }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-      {message}
+    <p role="alert" className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+      <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>{message}</span>
     </p>
   );
 }
@@ -51,8 +52,31 @@ export function Warnings({ items }: { items: string[] }) {
   );
 }
 
-export function Loading({ what }: { what: string }) {
-  return <p className="text-sm text-muted-foreground">Loading {what}…</p>;
+/** A shimmering placeholder shaped like the page, so nothing jumps when data arrives. The words
+ * stay for screen readers and tests; the shimmer is decoration. */
+export function Loading({ what, page = false }: { what: string; page?: boolean }) {
+  if (!page) {
+    return (
+      <div role="status" aria-busy="true">
+        <p className="sr-only">Loading {what}…</p>
+        <div aria-hidden className="skeleton h-5 w-40" />
+      </div>
+    );
+  }
+  return (
+    <div role="status" aria-busy="true" aria-live="polite">
+      <p className="sr-only">Loading {what}…</p>
+      <div aria-hidden className="space-y-4">
+        <div className="skeleton h-8 w-48" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="skeleton h-32" />
+          ))}
+        </div>
+        <div className="skeleton h-40" />
+      </div>
+    </div>
+  );
 }
 
 export function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
@@ -60,7 +84,7 @@ export function NativeSelect(props: React.SelectHTMLAttributes<HTMLSelectElement
     <select
       {...props}
       className={cn(
-        "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+        "h-9 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none transition-colors hover:border-ring/60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
         props.className,
       )}
     />
@@ -111,9 +135,9 @@ export function PageGuide({
     () => false,
   );
   return (
-    <details open={!closed} className={cn("rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-2 text-sm", className)}>
+    <details open={!closed} className={cn("rounded-xl border border-accent-foreground/15 bg-accent/60 px-3.5 py-2.5 text-sm", className)}>
       <summary
-        className="flex cursor-pointer list-none items-center gap-2 font-medium text-sky-900 dark:text-sky-200"
+        className="flex cursor-pointer list-none items-center gap-2 font-medium text-accent-foreground"
         onClick={(e) => {
           // The open state is ours, not the browser's: only a click changes it.
           e.preventDefault();
@@ -151,9 +175,9 @@ export function PageHeader({
 }) {
   return (
     <>
-      <header className={cn("flex flex-wrap items-start justify-between gap-3", about ? "mb-3" : "mb-6")}>
+      <header className={cn("flex flex-wrap items-start justify-between gap-3", about ? "mb-4" : "mb-8")}>
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <h1 className="text-3xl font-medium tracking-tight md:text-4xl">{title}</h1>
           {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
         </div>
         {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
@@ -165,8 +189,8 @@ export function PageHeader({
 
 export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed px-6 py-10 text-center">
-      <p className="font-medium">{title}</p>
+    <div className="rounded-2xl border border-dashed bg-card/50 px-6 py-12 text-center">
+      <p className="font-heading text-lg font-medium">{title}</p>
       {children ? <div className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">{children}</div> : null}
       {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
     </div>

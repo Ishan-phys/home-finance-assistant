@@ -73,13 +73,13 @@ export function PersonSwitcher({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex items-center gap-2">
+    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
       {people.length > 1 ? (
         <>
           <label htmlFor="person-switcher" className="text-sm text-muted-foreground">
             Viewing
           </label>
-          <NativeSelect id="person-switcher" value={current} onChange={(e) => onSelect(e.target.value)}>
+          <NativeSelect id="person-switcher" className="min-w-0 flex-1" value={current} onChange={(e) => onSelect(e.target.value)}>
             {people.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -91,7 +91,7 @@ export function PersonSwitcher({
         <span className="text-sm text-muted-foreground">{people[0]?.name}</span>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger render={<Button size="sm" variant="ghost">Add person</Button>} />
+        <DialogTrigger render={<Button size="sm" variant="ghost" className="-ml-2">Add person</Button>} />
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add a person</DialogTitle>
