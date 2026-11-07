@@ -138,7 +138,12 @@ Add more accounts or categories any time from the sidebar.
 ### More than one person
 
 Each person has their own ledger; nothing is shared. **Add person** sits under the name at the top
-of the sidebar, and the same place switches between people.
+of the sidebar, and the same place switches between people. Switching while you are looking at one
+account takes you back to **All accounts**, because that account belongs to the other person.
+
+**Delete person** removes the person you are viewing and everything in their ledger: accounts,
+transactions, uploaded statements, rules and privacy names. You type their name to confirm, and
+it cannot be undone. Nobody else's books change.
 
 ## 4. Getting around
 

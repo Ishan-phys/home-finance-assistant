@@ -50,7 +50,7 @@ function NavLink({
 }
 
 export function Sidebar({ onAsk }: { onAsk: () => void }) {
-  const { version, people, person, select } = usePerson();
+  const { version, people, person, select, reloadPeople } = usePerson();
   const sheet = useApi<BalanceSheet>("/reports/balance-sheet", version);
   const inbox = useApi<InboxItem[]>("/inbox", version);
   const path = usePathname();
@@ -64,6 +64,12 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
         {people && person ? <PersonSwitcher
             people={people}
             current={person.id}
+            onDeleted={async () => {
+              // The remembered person is gone, so this picks the next one, or the welcome screen
+              // when nobody is left.
+              router.push("/");
+              await reloadPeople();
+            }}
             onSelect={(id) => {
               select(id);
               // An account, and anything else with an id in its address, belongs to one person's

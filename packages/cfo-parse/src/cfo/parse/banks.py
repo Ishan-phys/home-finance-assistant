@@ -17,12 +17,13 @@ HDFC_BANK = BankStatementAdapter(
 )
 
 # .xlsx: "Date | Details | Ref No/Cheque No | Debit | Credit | Balance", dd/mm/yyyy dates,
-# amounts as text, and narrations wrapped with an embedded newline.
+# amounts as text, and narrations wrapped with an embedded newline. The .xls netbanking export
+# names the same columns "Txn Date | Value Date | Description | Ref No./Cheque No. | ...".
 SBI_BANK = BankStatementAdapter(
     BankLayout(
         binding="sbi_bank",
-        date=("date",),
-        narration=("details",),
+        date=("date", "txn date"),
+        narration=("details", "description"),
         debit=("debit",),
         credit=("credit",),
         balance=("balance",),

@@ -15,6 +15,7 @@ from datetime import date
 from cfo.core.ids import Id, new_id
 from cfo.core.types import Household, Ledger, Person, Scope
 from cfo.ledger.repositories.models import (
+    Base,
     HouseholdMemberRow,
     HouseholdRow,
     LedgerRow,
@@ -22,7 +23,7 @@ from cfo.ledger.repositories.models import (
     PersonRow,
     RedactionTermRow,
 )
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 
@@ -86,6 +87,38 @@ class PeopleRepository:
     def scope_of(self, person_id: Id) -> Scope | None:
         found = self.get(person_id)
         return None if found is None else Scope.of(found[1].id)
+
+    def delete(self, person_id: Id) -> Id:
+        """Remove a person and their whole ledger: accounts, statements, transactions, rules,
+        privacy terms, everything. Nothing is shared between people, so no one else is touched.
+        A household left with no members goes too. Returns the deleted ledger's id; raises KeyError
+        if the person is unknown."""
+        found = self.get(person_id)
+        if found is None:
+            raise KeyError(person_id)
+        ledger_id = found[1].id
+        # Children before parents: reverse foreign-key order over every table the ledger owns.
+        for table in reversed(Base.metadata.sorted_tables):
+            if "ledger_id" in table.c and table.name != "ledgers":
+                self.s.execute(delete(table).where(table.c.ledger_id == ledger_id))
+        households = self.s.scalars(
+            select(HouseholdMemberRow.household_id).where(HouseholdMemberRow.person_id == person_id)
+        ).all()
+        self.s.execute(delete(HouseholdMemberRow).where(HouseholdMemberRow.person_id == person_id))
+        for household_id in set(households):
+            if (
+                self.s.scalars(
+                    select(HouseholdMemberRow.person_id).where(
+                        HouseholdMemberRow.household_id == household_id
+                    )
+                ).first()
+                is None
+            ):
+                self.s.execute(delete(HouseholdRow).where(HouseholdRow.id == household_id))
+        self.s.execute(delete(LedgerRow).where(LedgerRow.id == ledger_id))
+        self.s.execute(delete(PersonRow).where(PersonRow.id == person_id))
+        self.s.flush()
+        return ledger_id
 
     def any(self) -> bool:
         return self.s.scalars(select(PersonRow.id).limit(1)).first() is not None
