@@ -11,6 +11,7 @@ from datetime import date
 from typing import Any
 
 import pytest
+from cfo.agent.prompt import TOOL_USE
 from cfo.agent.service import INSTRUCTION, _instruction
 from cfo.agent.tools import build_tools
 from cfo.api.app import create_app
@@ -125,7 +126,7 @@ def test_instruction_asks_for_insight_and_carries_today_s_date() -> None:
         "open with the answer",
     ):
         assert rule in text, rule
-    given = _instruction(lambda: TODAY)(None)
+    given = _instruction(lambda: TODAY, list(TOOL_USE))(None)
     assert given.startswith(INSTRUCTION) and "Today is 3 October 2026." in given
 
 

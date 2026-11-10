@@ -31,7 +31,7 @@ export function AssistantPanel({ open, onClose }: { open: boolean; onClose: () =
         about={{
           id: "assistant",
           points: [
-            "Ask in plain words, for example “How much did I spend on food in September?” or “How am I doing overall?”",
+            "Ask in plain words, for example “How much did I spend on food in September?” “Which credit card had the most spending?” or “How am I doing overall?”",
             "It looks at your ledger through tools, including month-by-month trends, so it can say what changed and why. The small “checked …” tags show what it looked at.",
             "Every figure is calculated by the app, not by the model, so it matches the other pages.",
             "It explains your numbers but does not change them. To fix a category or add a rule, use the Transactions and Rules pages.",
