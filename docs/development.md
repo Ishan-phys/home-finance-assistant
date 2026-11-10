@@ -1,7 +1,7 @@
 # Development
 
-How to build, test and change the code. To run and use the app, see the
-[user guide](user-guide.md). For how the pieces fit together, see [architecture](architecture.md).
+How to build, test and change the code. To run and use the app, see
+[Getting started](getting-started.md) and the [user guide](user-guide.md). For how the pieces fit together, see [architecture](architecture.md).
 
 ## Prerequisites
 
@@ -64,7 +64,7 @@ works. The tests never call a live model.
 
 ## Sign-in
 
-The API needs an owner to sign in. For local work, `.env` holds one (see the user guide). The
+The API needs an owner to sign in. For local work, `.env` holds one (see [Getting started](getting-started.md#step-4-set-up-your-sign-in)). The
 browser tests use a fixed throwaway owner in `docker-compose.e2e.yml` (username `owner`, password
 `e2e-owner-password`), and `web/e2e/global-setup.ts` signs in once and keeps the session for every
 test. The Python tests set their own owner in `api/tests/conftest.py`; they never read `.env`.

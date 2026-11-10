@@ -11,7 +11,7 @@ from dataclasses import dataclass
 # What to upload for each statement format.
 EXPECTED = {
     "hdfc_bank": "the HDFC Bank account statement from NetBanking (.xls or .csv), with the columns Date, Narration, Withdrawals, Deposits and Closing Balance",
-    "sbi_bank": "the SBI account statement (.xlsx or .csv) with Date, Description, Debit, Credit and Balance columns",
+    "sbi_bank": "the SBI account statement (.xls, .xlsx or .csv) with Date (or Txn Date), Description (or Details), Debit, Credit and Balance columns",
     "hdfc_credit_card": "the billed credit card statement from HDFC (.xls or .xlsx)",
     "axis_credit_card": "the monthly Axis credit card statement PDF",
     "groww": "the holdings statement or order history exported from Groww (.xlsx)",

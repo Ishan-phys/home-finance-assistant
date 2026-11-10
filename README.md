@@ -15,6 +15,7 @@
 </p>
 
 <p align="center">
+  <a href="docs/getting-started.md">Getting started</a> ·
   <a href="docs/user-guide.md">User guide</a> ·
   <a href="docs/architecture.md">Architecture</a> ·
   <a href="docs/development.md">Development</a> ·
@@ -69,20 +70,35 @@ your name, account numbers or phone number.
 
 ## Quick start
 
-You need [Docker](https://docs.docker.com/get-docker/).
+You need [Docker](https://docs.docker.com/get-docker/) running. Nothing else has to be installed.
 
 ```sh
 git clone https://github.com/Ishan-phys/home-finance-assistant.git
 cd home-finance-assistant
-cp .env.example .env   # then, optionally, set ANTHROPIC_API_KEY or OPENAI_API_KEY in it
-make up                # web on http://127.0.0.1:3000, API on http://127.0.0.1:8000
+cp .env.example .env
 ```
 
-Open http://127.0.0.1:3000. The app asks your name, walks you through adding your accounts and
-categories, then you upload statements. Without a model key, everything works except chat and
-automatic categorization.
+Then set up your sign-in. Choose a username, make a password hash, and make a session secret:
 
-The [user guide](docs/user-guide.md) covers settings, upgrades, privacy and troubleshooting.
+```sh
+docker compose run --rm --no-deps api python -m cfo.api.auth
+docker compose run --rm --no-deps api python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Put the username in `OWNER_USERNAME`, the printed hash in `OWNER_PASSWORD_HASH` (inside single
+quotes), and the secret in `SESSION_SECRET`, all in `.env`. Then start the app:
+
+```sh
+docker compose up -d --build   # web on http://127.0.0.1:3000, API on http://127.0.0.1:8000
+```
+
+Open http://127.0.0.1:3000 and sign in. The app asks your name, walks you through adding your
+accounts and categories, then you upload statements. Or choose **Load sample statements** to look
+around first. A model key (`OPENAI_API_KEY` **or** `ANTHROPIC_API_KEY`, never both) is optional:
+without one everything works except chat and automatic categorization.
+
+**[Getting started](docs/getting-started.md)** walks through every step with screenshots, what you
+should see at each one, and what to do if it does not work.
 
 ## How it works
 
@@ -109,7 +125,13 @@ for the packages and the rules that hold them together.
 
 | | |
 | --- | --- |
-| [User guide](docs/user-guide.md) | Install, set up, upload statements, read the figures |
+| [Getting started](docs/getting-started.md) | **Start here.** From install to your first answer, step by step with screenshots |
+| [User guide](docs/user-guide.md) | Every page and feature explained |
+| [Statements](docs/statements.md) | Which file to download for each bank, and fixing an upload |
+| [The assistant](docs/assistant.md) | What you can ask, and how to read an answer |
+| [Configuration](docs/configuration.md) | Settings, model keys, sign-in, backups and updating |
+| [Troubleshooting and FAQ](docs/troubleshooting.md) | What to do when something goes wrong |
+| [Glossary](docs/glossary.md) | Plain-English meanings of the words the app uses |
 | [Development](docs/development.md) | Commands, tests and test data |
 | [Architecture](docs/architecture.md) | Packages, a statement's journey, design rules |
 | [HTTP API](docs/api.md) | Routes, amounts and errors |
