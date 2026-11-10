@@ -50,6 +50,7 @@ from cfo.metrics.income_statement import CategoryLine, check_line, income_statem
 from cfo.metrics.leaks import leaks
 from cfo.metrics.reconcile import gaps
 from cfo.metrics.safe_to_spend import safe_to_spend
+from cfo.metrics.trend import category_moves, mean, monthly_trend
 from sqlalchemy.orm import Session
 
 Json = dict[str, Any]
@@ -338,6 +339,78 @@ def leaks_report(data: Data, month: str | None = None) -> Json:
         "baseline_months": r.baseline_months,
         "reason": r.variance_reason,
         "rows": rows,
+    }
+
+
+def _movement(change: int | None, pct: int | None) -> Json | None:
+    """A change worded for quoting: which way, by how much, and by what percent."""
+    if change is None:
+        return None
+    return {
+        "direction": "up" if change > 0 else "down" if change < 0 else "flat",
+        "amount": money(abs(change)),
+        "percent": None if pct is None else f"{abs(pct)}%",
+    }
+
+
+@json_safe
+def trend_report(data: Data, months: int = 6) -> Json:
+    """Month by month: money in, out and saved, the savings rate, how spending moved against the
+    month before, the average of the complete months, and which categories drove the latest
+    complete month, each against the month before it. Only months with imported statements are
+    listed. A month still in progress is shown but never compared: three days of spending set
+    against a whole month would read as a collapse."""
+    if not 2 <= months <= 12:
+        raise ValueError("months must be between 2 and 12")
+    keys = sorted({month_key(t.date) for t in data.transactions if t.source == "import"})[-months:]
+    if not keys:
+        return {"months": [], "average": None, "categories": None}
+    lines = monthly_trend(data.accounts, data.transactions, keys)
+    partial = {k for k in keys if month_bounds(k)[1] >= data.today}
+    complete = [x for x in lines if x.month not in partial]
+    rows = [
+        {
+            "month": x.month,
+            "complete": x.month not in partial,
+            "net_in": money(x.net_in),
+            "net_out": money(x.net_out),
+            "saved": money(x.saved),
+            "savings_rate": None if x.savings_rate is None else f"{x.savings_rate}%",
+            "net_out_vs_previous": _movement(x.net_out_change, x.net_out_change_pct)
+            if i and x.month not in partial and keys[i - 1] not in partial
+            else None,
+            "compared_with": keys[i - 1] if i else None,
+            "note": "month in progress: figures so far, not comparable"
+            if x.month in partial
+            else None,
+        }
+        for i, x in enumerate(lines)
+    ]
+    latest = complete[-1].month if complete else keys[-1]
+    return {
+        "months": rows,
+        "average": None
+        if not complete
+        else {
+            "months_counted": len(complete),
+            "net_in": money(mean([x.net_in for x in complete])),
+            "net_out": money(mean([x.net_out for x in complete])),
+            "saved": money(mean([x.saved for x in complete])),
+        },
+        "categories": {
+            "month": latest,
+            "compared_with": previous_month(latest),
+            "rows": [
+                {
+                    "category": c.name,
+                    "amount": money(c.amount),
+                    "share_of_spending": None if c.share is None else f"{c.share}%",
+                    "previous": money(c.previous_amount),
+                    "vs_previous": _movement(c.change, c.change_pct),
+                }
+                for c in category_moves(data.accounts, data.transactions, latest)[:8]
+            ],
+        },
     }
 
 

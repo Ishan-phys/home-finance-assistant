@@ -11,7 +11,7 @@ from datetime import date
 from typing import Any
 
 import pytest
-from cfo.agent.service import INSTRUCTION
+from cfo.agent.service import INSTRUCTION, _instruction
 from cfo.agent.tools import build_tools
 from cfo.api.app import create_app
 from cfo.api.sample import load_sample_into
@@ -114,6 +114,47 @@ def test_instruction_carries_the_figure_and_coverage_rules() -> None:
         "name the statement upload",
     ):
         assert rule in " ".join(text.split()), rule
+
+
+def test_instruction_asks_for_insight_and_carries_today_s_date() -> None:
+    text = " ".join(INSTRUCTION.lower().split())
+    for rule in (
+        "never add, subtract, divide or compare numbers yourself",
+        "gather before you answer",
+        "not complete is partial",
+        "open with the answer",
+    ):
+        assert rule in text, rule
+    given = _instruction(lambda: TODAY)(None)
+    assert given.startswith(INSTRUCTION) and "Today is 3 October 2026." in given
+
+
+def test_the_model_request_carries_the_instruction_with_the_date(chat_env) -> None:
+    client, fake = chat_env
+    ask(client, "leak?")
+    sent = str(fake.seen[0].config.system_instruction)
+    assert "personal CFO" in sent and "Today is 3 October 2026." in sent
+
+
+def test_trend_tool_gives_comparisons_as_ready_made_figures(database: Database) -> None:
+    load_sample_into(database, database.default_scope, TODAY, SeedClient())
+    tools = {t.__name__: t for t in build_tools(database, lambda: TODAY)}
+    result = tools["get_trend"](months=4)["result"]
+    months = result["months"]
+    assert 2 <= len(months) <= 4 and months[0]["net_out_vs_previous"] is None
+    assert months[1]["compared_with"] == months[0]["month"]
+    assert months[-1]["complete"] is False  # October is still in progress on the 3rd
+    assert months[-1]["net_out_vs_previous"] is None and "in progress" in months[-1]["note"]
+    assert months[-1]["month"] != result["categories"]["month"]  # categories: latest complete month
+    assert result["average"]["months_counted"] == len([m for m in months if m["complete"]])
+    assert result["categories"]["rows"], "the latest month's categories come with their changes"
+    assert "error" in tools["get_trend"](months=1)
+    assert tools["get_trend"]()["result"]["months"] is not None
+
+
+def test_trend_on_an_empty_ledger_answers_instead_of_failing(database: Database) -> None:
+    tools = {t.__name__: t for t in build_tools(database, lambda: TODAY)}
+    assert tools["get_trend"]()["result"] == {"months": [], "average": None, "categories": None}
 
 
 def test_local_tool_path_is_under_300ms(database: Database) -> None:

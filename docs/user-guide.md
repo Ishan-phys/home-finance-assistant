@@ -307,9 +307,13 @@ zero data retention. Only the owner can sign in (see Signing in above). The app 
 
 ## 9. Asking questions
 
-**Ask** opens the assistant beside the page. It reads your ledger through five tools (net worth,
-spending, spending that grew, safe to spend, and the Inbox) and explains what they returned. Try:
+**Ask** opens the assistant beside the page. It reads your ledger through six tools (net worth,
+spending, month-by-month trends, spending that grew, safe to spend, and the Inbox) and explains
+what they returned: what stands out, why, and what to do next. Answers are formatted, with the key
+figures in bold and a small table when months or categories are compared. Try:
 
+- "How am I doing overall?"
+- "Is my spending going up, and what is driving it?"
 - "How much can I safely spend this month?"
 - "Where did my money leak this month?"
 - "What is my net worth, and what do I owe?"
