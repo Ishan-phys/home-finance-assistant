@@ -24,8 +24,14 @@ def clamp_day(year: int, month: int, day: int) -> date:
 
 def parse_month(month: str) -> tuple[int, int]:
     year_text, _, month_text = month.partition("-")
+    if (
+        not (year_text.isdigit() and month_text.isdigit())
+        or len(year_text) != 4
+        or len(month_text) != 2
+    ):
+        raise ValueError(f"month must be YYYY-MM: {month!r}")
     year, mon = int(year_text), int(month_text)
-    if not (1 <= mon <= 12) or len(year_text) != 4 or len(month_text) != 2:
+    if not 1 <= mon <= 12:
         raise ValueError(f"month must be YYYY-MM: {month!r}")
     return year, mon
 

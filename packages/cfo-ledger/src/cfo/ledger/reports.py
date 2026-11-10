@@ -25,6 +25,7 @@ from cfo.core.types import (
     Account,
     AccountKind,
     AccountRole,
+    AccountType,
     Assertion,
     Direction,
     Group,
@@ -42,6 +43,7 @@ from cfo.ledger.repositories.accounts import (
     ValuationRepository,
 )
 from cfo.ledger.repositories.transactions import JournalRepository
+from cfo.metrics.activity import account_activity, ranks
 from cfo.metrics.balance_sheet import BalanceSheet, balance_sheet
 from cfo.metrics.balances import balances_at
 from cfo.metrics.card_payments import card_choices, payable_amount
@@ -49,7 +51,9 @@ from cfo.metrics.inbox import inbox
 from cfo.metrics.income_statement import CategoryLine, check_line, income_statement
 from cfo.metrics.leaks import leaks
 from cfo.metrics.reconcile import gaps
+from cfo.metrics.recurring import recurring_payments
 from cfo.metrics.safe_to_spend import safe_to_spend
+from cfo.metrics.search import by_month, find_flows, largest_first, latest_first
 from cfo.metrics.trend import category_moves, mean, monthly_trend
 from sqlalchemy.orm import Session
 
@@ -411,6 +415,247 @@ def trend_report(data: Data, months: int = 6) -> Json:
                 for c in category_moves(data.accounts, data.transactions, latest)[:8]
             ],
         },
+    }
+
+
+# which account, which payee: activity, search and regular payments ---------------------
+
+_BANK = {AccountType.SAVINGS, AccountType.CURRENT}
+ACCOUNT_KINDS = ("all", "bank", "credit_card", "loan")
+
+
+def _kind_of(a: Account) -> str:
+    if a.type in _BANK:
+        return "bank"
+    if a.type is AccountType.CREDIT_CARD:
+        return "credit_card"
+    if a.type is AccountType.LOAN:
+        return "loan"
+    return "other"
+
+
+def _type_label(a: Account | None) -> str | None:
+    """What kind of account this is, in words the model can use ("Credit card"). The model sees
+    only a stand-in name, which would otherwise be all it knew."""
+    return a.type.label if a and a.type else None
+
+
+def _day(label: str, text: str) -> date:
+    try:
+        return date.fromisoformat(text)
+    except ValueError:
+        raise ValueError(f"{label} must be a date as YYYY-MM-DD, not {text!r}") from None
+
+
+def _span(
+    data: Data, month: str | None, start: str | None, end: str | None, *, whole: bool
+) -> tuple[date | None, date | None]:
+    """The period asked for. A month, or a start and/or end date; with neither, the default
+    month, or (`whole`) no limit at all. Raises ValueError for a bad or backwards range."""
+    if month and (start or end):
+        raise ValueError("give a month, or a start and end date, not both")
+    if month:
+        return month_bounds(month)
+    if start or end:
+        first = _day("start", start) if start else None
+        last = _day("end", end) if end else None
+        if first and last and first > last:
+            raise ValueError("start must not be after end")
+        return first, last
+    return (None, None) if whole else month_bounds(default_month(data))
+
+
+def _period_json(data: Data, start: date | None, end: date | None) -> Json:
+    dates = [t.date for t in data.transactions]
+    first = start or (min(dates) if dates else None)
+    last = end or data.today
+    return {
+        "start": first,
+        "end": last,
+        # A period that reaches today is still filling up: never present it as a full total.
+        "in_progress": last >= data.today,
+    }
+
+
+def _movement_row(data: Data, f: Any) -> Json:
+    a = data.account(f.account_id)
+    return {
+        "date": f.date,
+        "payee": f.payee,
+        "amount": money(abs(f.amount)),
+        "direction": "out" if f.out else "in",
+        "account": a.display_name if a else "?",
+        "account_type": _type_label(a),
+        "category": f.counterpart.display_name if f.counterpart else None,
+    }
+
+
+@json_safe
+def account_activity_report(
+    data: Data,
+    month: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    kind: str = "all",
+) -> Json:
+    """What each bank account, card or loan spent, paid out, received and moved, ranked."""
+    if kind not in ACCOUNT_KINDS:
+        raise ValueError(f"kind must be one of {', '.join(ACCOUNT_KINDS)}")
+    first, last = _span(data, month, start, end, whole=False)
+    if first is None or last is None:  # a half-open range: fill the missing side
+        dates = [t.date for t in data.transactions]
+        first = first or (min(dates) if dates else data.today)
+        last = last or data.today
+    real = [
+        a
+        for a in data.accounts
+        if a.role is AccountRole.REAL and (kind == "all" or _kind_of(a) == kind)
+    ]
+    by_id = {a.id: a for a in real}
+    active = {
+        x.account_id: x for x in account_activity(data.accounts, data.transactions, first, last)
+    }
+    rows_in = [active[i] for i in by_id if i in active]
+    rank = {
+        key: ranks({x.account_id: getattr(x, key) for x in rows_in})
+        for key in ("spending", "total_out", "payments")
+    }
+    rows = [
+        {
+            "account": by_id[x.account_id].display_name,
+            "account_type": _type_label(by_id[x.account_id]),
+            "spending": money(x.spending),
+            "sent_to_people": money(x.people_out),
+            "moved_to_own_accounts": money(x.transfers_out),
+            "total_out": money(x.total_out),
+            "payments": x.payments,
+            "income": money(x.income),
+            "received_from_people": money(x.people_in),
+            "moved_from_own_accounts": money(x.transfers_in),
+            "refunds": money(x.refunds),
+            "total_in": money(x.total_in),
+            "transactions": x.transactions,
+            "rank_by_spending": rank["spending"].get(x.account_id),
+            "rank_by_total_out": rank["total_out"].get(x.account_id),
+            "rank_by_payments": rank["payments"].get(x.account_id),
+        }
+        for x in sorted(rows_in, key=lambda x: (-x.spending, -x.total_out, str(x.account_id)))
+    ]
+    top = {
+        key: [r["account"] for r in rows if r[f"rank_by_{key}"] == 1]
+        for key in ("spending", "total_out", "payments")
+    }
+    return {
+        "period": _period_json(data, first, last),
+        "kind": kind,
+        "accounts": rows,
+        "top": top,  # ties list every account that shares the top rank
+        "totals": {
+            "spending": money(sum(x.spending for x in rows_in)),
+            "total_out": money(sum(x.total_out for x in rows_in)),
+            "total_in": money(sum(x.total_in for x in rows_in)),
+        },
+        "no_activity": [a.display_name for a in real if a.id not in active],
+    }
+
+
+@json_safe
+def transactions_search_report(
+    data: Data,
+    text: str | None = None,
+    month: str | None = None,
+    start: str | None = None,
+    end: str | None = None,
+    direction: str = "out",
+    category: str | None = None,
+    account: str | None = None,
+    sort: str = "amount",
+    limit: int = 10,
+    include_transfers: bool = False,
+) -> Json:
+    """Movements matching a payee text, category and/or account over a period, with the total,
+    a month-by-month split and the largest or latest few."""
+    if direction not in ("out", "in", "any"):
+        raise ValueError("direction must be out, in or any")
+    if sort not in ("amount", "date"):
+        raise ValueError("sort must be amount or date")
+    if not 1 <= limit <= 25:
+        raise ValueError("limit must be between 1 and 25")
+    first, last = _span(data, month, start, end, whole=True)
+    ids = None
+    if account:
+        wanted = account.strip().casefold()
+        ids = {
+            a.id
+            for a in data.accounts
+            if a.role is AccountRole.REAL and wanted in a.display_name.casefold()
+        }
+        if not ids:
+            known = ", ".join(a.display_name for a in data.accounts if a.role is AccountRole.REAL)
+            raise ValueError(f"no account matches {account!r}; the accounts are: {known}")
+    matches = find_flows(
+        data.accounts,
+        data.transactions,
+        first,
+        last,
+        text=text,
+        direction=direction,  # type: ignore[arg-type]
+        category=category,
+        account_ids=ids,
+        include_transfers=include_transfers,
+    )
+    ordered = largest_first(matches) if sort == "amount" else latest_first(matches)
+    return {
+        "period": _period_json(data, first, last) if (first or last) else "all statements",
+        "filters": {
+            "text": text,
+            "category": category,
+            "account": account,
+            "direction": direction,
+            "transfers_between_own_accounts": include_transfers,
+        },
+        "count": len(matches),
+        "total": money(sum(abs(f.amount) for f in matches)),
+        "by_month": [
+            {"month": m, "total": money(total), "count": n}
+            for m, total, n in by_month(matches)[-12:]
+        ],
+        "rows": [_movement_row(data, f) for f in ordered[:limit]],
+        "truncated": len(matches) > limit,
+        "note": "Refunds and money received are listed with direction in; they are not netted off.",
+    }
+
+
+@json_safe
+def recurring_payments_report(data: Data, months: int = 6) -> Json:
+    """Payees that show up in at least three of the last complete months, with their usual
+    monthly amount."""
+    if not 3 <= months <= 12:
+        raise ValueError("months must be between 3 and 12")
+    keys = sorted({month_key(t.date) for t in data.transactions if t.source == "import"})
+    complete = [k for k in keys if month_bounds(k)[1] < data.today][-months:]
+    if len(complete) < 3:
+        return {
+            "months_looked_at": complete,
+            "payments": [],
+            "note": "Regular payments need at least three complete months of statements.",
+        }
+    found = recurring_payments(data.accounts, data.transactions, complete)
+    return {
+        "months_looked_at": complete,
+        "payments": [
+            {
+                "payee": r.payee,
+                "category": r.category,
+                "months_seen": r.months_seen,
+                "usual_monthly_amount": money(r.average_monthly),
+                "latest_month_amount": money(r.latest_amount),
+                "last_paid": r.last_date,
+                "steady": r.steady,
+            }
+            for r in found[:12]
+        ],
+        "regular_total_per_month": money(sum(r.average_monthly for r in found)),
     }
 
 

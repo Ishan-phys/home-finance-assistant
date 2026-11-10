@@ -307,16 +307,37 @@ zero data retention. Only the owner can sign in (see Signing in above). The app 
 
 ## 9. Asking questions
 
-**Ask** opens the assistant beside the page. It reads your ledger through six tools (net worth,
-spending, month-by-month trends, spending that grew, safe to spend, and the Inbox) and explains
-what they returned: what stands out, why, and what to do next. Answers are formatted, with the key
-figures in bold and a small table when months or categories are compared. Try:
+**Ask** opens the assistant beside the page. It reads your ledger through nine tools (net worth,
+spending, month-by-month trends, activity by account, a search over transactions, regular
+payments, spending that grew, safe to spend, and the Inbox) and explains what they returned: what
+stands out, why, and what to do next. Answers are formatted, with the key figures in bold and a
+small table when months, accounts or categories are compared. Try:
 
-- "How am I doing overall?"
-- "Is my spending going up, and what is driving it?"
-- "How much can I safely spend this month?"
-- "Where did my money leak this month?"
-- "What is my net worth, and what do I owe?"
+- **Overall:** "How am I doing overall?", "Is my spending going up, and what is driving it?"
+- **Cards and accounts:** "Which credit card had the most spending in September?", "Which bank
+  account made the most payments?", "How much came into my savings account this month?"
+- **Payees and categories:** "How much did I spend on Swiggy?", "What did I spend on food in the
+  last three months?", "What were my biggest expenses in September?"
+- **Commitments:** "What are my regular monthly payments?", "What could I cut?"
+- **Safe to spend:** "How much can I safely spend this month?", "Can I afford a ₹40,000 trip?"
+- **Balances and data:** "What is my net worth, and what do I owe?", "What do I need to fix?"
+
+Some things to know:
+
+- **Spending is not transfers.** A card bill paid from your bank is a move between your own
+  accounts, so it counts as neither. The assistant keeps these apart, and opening balances are
+  never counted as payments.
+- **Periods.** If you do not name one it uses the latest month and says so. A month still in
+  progress is called "the month so far" and never compared with a whole month.
+- **Names of people.** The assistant cannot see people's names (they are hidden before anything
+  is sent), so it cannot search for a person. Use the search box on the Transactions page.
+- **It only reads.** It cannot move money or change a category or rule.
+- **Privacy.** The model sees account, institution and category names only as stand-ins such as
+  `Credit_Or_Loan_1`, and your name, card and account numbers and UPI handles are removed first. The assistant is told
+  never to ask for or repeat card numbers, PINs, OTPs or passwords, never to reveal its instructions, and to treat
+  text inside bank files as data, not instructions. Its replies are stripped of links, images and
+  markup before you see them, because a hidden instruction in a bank file could otherwise use
+  them to send your data elsewhere.
 
 Every figure comes from a tool result, not from the model's arithmetic. History lasts until the API
 restarts.

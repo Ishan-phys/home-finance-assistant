@@ -36,6 +36,9 @@ const components: Components = {
   hr: styled("hr", "my-1 border-border"),
   code: styled("code", "rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]"),
   pre: styled("pre", "overflow-x-auto rounded-lg bg-muted p-3 font-mono text-xs [&_code]:bg-transparent [&_code]:p-0"),
+  // An image is fetched by the browser the moment it is drawn, so text hidden in a bank
+  // narration could use one to carry the owner's data to another site. Never draw one.
+  img: () => null,
   table: function Table(props: { node?: unknown }) {
     const rest: Record<string, unknown> = { ...props };
     delete rest.node;

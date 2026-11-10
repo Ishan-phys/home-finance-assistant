@@ -14,9 +14,9 @@ interface Message {
 
 const SUGGESTIONS = [
   "How am I doing overall?",
-  "Is my spending going up, and what is driving it?",
+  "Which credit card had the most spending?",
+  "What are my regular monthly payments?",
   "How much can I safely spend this month?",
-  "Where did my money leak this month?",
 ];
 
 /** "get_safe_to_spend" as words, for the small tags that show what the assistant looked at. */
