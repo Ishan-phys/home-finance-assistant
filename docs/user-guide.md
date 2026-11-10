@@ -1,4 +1,8 @@
-# AI CFO: setup and user guide
+# AI CFO user guide
+
+This guide explains every page and feature, for when you want to know what something does. If you
+are new, start with [Getting started](getting-started.md), which takes you from nothing to your
+first answer step by step.
 
 AI CFO is a personal finance ledger that runs on your own machine. You set up the accounts you
 hold, drop in their statements, and it removes personal details, reads them, sorts every
@@ -10,111 +14,20 @@ Under the hood it keeps double-entry books: every transaction moves money from o
 another, and the two sides always add up. You never have to think about that, but it is why the
 numbers on every screen agree with each other.
 
-## 1. What you need
+## Where to find things
 
-| Need | Why |
+| I want to | Read |
 | --- | --- |
-| Docker Desktop (or Docker Engine with Compose) | Runs the web app, the API, and PostgreSQL |
-| An OpenAI **or** an Anthropic API key (one, not both) | Runs both the chat assistant and the statement categorizer |
+| Install and set up for the first time | [Getting started](getting-started.md) |
+| Know which file to download, and fix an upload | [Statements](statements.md) |
+| Ask questions about my money | [The assistant](assistant.md) |
+| Change a setting, back up, update, or sign-in details | [Configuration](configuration.md) |
+| Fix a problem | [Troubleshooting and FAQ](troubleshooting.md) |
+| Look up a word | [Glossary](glossary.md) |
 
-The app works without keys. Without them, statements still import and every figure still computes,
-but rows stay Uncategorized and the chat is unavailable. With an OpenAI key, OpenAI does both
-(the Decisions API categorizes). With an Anthropic key, Claude does both.
+## Setting up
 
-Nothing runs in the cloud except the model calls, and those carry only redacted text (see
-section 6).
-
-## 2. Start the app
-
-```sh
-git clone <this repository> && cd home-finance-assistant
-cp .env.example .env
-```
-
-Open `.env` and fill in one key (OpenAI or Anthropic, not both):
-
-```sh
-OPENAI_API_KEY=sk-...        # or: ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Then set up sign-in, using the same `.env` file. Choose a username and a password, and run:
-
-```sh
-uv run python -m cfo.api.auth      # type the password twice; it prints a hash
-```
-
-Put the username in `OWNER_USERNAME`, the printed hash in `OWNER_PASSWORD_HASH` inside single
-quotes (it contains `$` signs), and a long random string in `SESSION_SECRET`:
-
-```sh
-OWNER_USERNAME=ishan
-OWNER_PASSWORD_HASH='scrypt$32768$8$1$...'
-SESSION_SECRET=...           # python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-Everything else in `.env` has a sensible default. Then:
-
-```sh
-make rebuild    # or: docker compose up --build
-```
-
-The first start builds the images, creates the database, and applies the migrations. When it
-settles, open **http://127.0.0.1:3000**.
-
-| Service | Address | Notes |
-| --- | --- | --- |
-| Cockpit (web app) | http://127.0.0.1:3000 | What you use |
-| API | http://127.0.0.1:8000 | Used by the cockpit; signing in is required for every request except `/health` |
-| PostgreSQL | not published | Reachable only from the other containers |
-
-Both ports bind to `127.0.0.1`, so nothing else on your network can reach the app. To check:
-`./scripts/check-ports.sh`.
-
-### Signing in
-
-Open the cockpit and sign in with the username and password from `.env`. You stay signed in on that
-browser for 5 days. **Sign out** is at the bottom of the sidebar.
-
-- Five wrong passwords in 15 minutes lock the form for 15 minutes, even for the right password.
-- Changing `OWNER_PASSWORD_HASH` signs every browser out. Changing `SESSION_SECRET` does too.
-- Signing out clears the cookie in that browser. A copy of the cookie stays valid until it expires,
-  so if a device is lost, change `SESSION_SECRET` and restart.
-
-`make up` starts the stack without rebuilding images that already exist; `make rebuild` rebuilds after you change code. `make help` lists every shortcut. To stop: `Ctrl+C`, or `make down`. Your data lives in a Docker volume and survives a
-restart. `docker compose down -v` deletes it.
-
-### Settings in `.env`
-
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `ANTHROPIC_API_KEY` | none | Chat and categorization with Claude |
-| `OPENAI_API_KEY` | none | Chat and categorization with OpenAI (Decisions API) |
-| `CATEGORIZER` | `auto` | `auto` follows the key you set; `none` turns categorization off |
-| `DECISIONS_MODEL` | `gpt-6-luna` | The model the Decisions API uses |
-| `DECISIONS_THRESHOLD` | `0.6` | Labels below this confidence stay Uncategorized |
-| `CATEGORIZATION_MODEL` | `claude-haiku-4-5-20251001` | The Claude fallback |
-| `NARRATION_KEY` | generated | Key that encrypts original narrations at rest |
-| `ALLOWED_HOSTS` | local only | Extra host names the API answers to, added to `localhost`, `127.0.0.1` and the web service. Set it to the name you browse by, for example your Tailscale name |
-| `CHAT_MODEL` | provider default | The chat model (`claude-sonnet-5-5` or `gpt-5.5`) |
-| `POSTGRES_PASSWORD` | `cfo-local-dev` | Database password (the database is not reachable from outside Docker) |
-
-Set exactly one key. With an OpenAI key, both chat and categorization use OpenAI; with an Anthropic key, both use Claude. Setting both stops the API at start with a message asking you to remove one.
-
-After changing `.env`, run `docker compose up -d` again so the API picks it up.
-
-### If you upgrade from an older version
-
-Migration `0009` moves the ledger to double-entry books. It does not convert old data: your
-people, privacy terms and labels stay, but accounts and transactions are removed, so you set up
-your accounts again and re-upload statements. It cannot be undone. Back up first:
-
-```sh
-make backup        # writes backup.sql (keep it private: it holds your financial data)
-```
-
-## 3. Setting up
-
-The first time you open the app it asks for your name, and for any family names that should never
+This is also walked through, with screenshots, in [Getting started](getting-started.md#part-2-set-up-your-books). The first time you open the app it asks for your name, and for any family names that should never
 leave your machine. You can also choose **Load sample statements** to look around with invented
 data instead.
 
@@ -135,17 +48,9 @@ Setup then takes four short steps, and the app returns to it until you finish:
 
 Add more accounts or categories any time from the sidebar.
 
-### More than one person
+To add or remove people, see [More than one person](#more-than-one-person).
 
-Each person has their own ledger; nothing is shared. **Add person** sits under the name at the top
-of the sidebar, and the same place switches between people. Switching while you are looking at one
-account takes you back to **All accounts**, because that account belongs to the other person.
-
-**Delete person** removes the person you are viewing and everything in their ledger: accounts,
-transactions, uploaded statements, rules and privacy names. You type their name to confirm, and
-it cannot be undone. Nobody else's books change.
-
-## 4. Getting around
+## Getting around
 
 The sidebar is always on the left:
 
@@ -167,15 +72,127 @@ On a phone the sidebar opens from the menu button at the top.
 Every page starts with an **About this page** note that says what the page shows and what you can
 do there. Click its title to close it; it stays closed on that page until you open it again.
 
-## 5. Statements
+## A closer look at each page
 
-Open an account and choose **Upload statement**. The file is read in memory and never kept.
+Every page opens with an **About this page** note. Click its title to close it. It stays closed
+on that page until you open it again.
+
+### Overview
+
+Four things: your net worth, the latest month's money in and out, how much is safe to spend, and
+the top of your Inbox.
+
+![The Overview page](images/manual/20-overview.png)
+
+### Inbox
+
+Everything that needs you, each with its fix beside it: a button to **Upload** a missing
+statement, **Choose category**, **Pay a card**, or **Open account**. The number beside **Inbox** in
+the menu is how many items there are.
+
+![The Inbox](images/manual/22-inbox.png)
+
+### Spending
+
+One month of money in and out. Use the **arrows** beside the month name to move between months.
+
+- **Net in**, **Net out** and **Saved** are the three cards at the top.
+- The line under them, such as "Net worth changed by ₹1,15,619.00: saved ₹1,15,619.00 ✓", is the
+  **check line**. It proves the month's figures add up to the change in what you own.
+- **Where it went** lists spending by category, biggest first, with sub-categories indented.
+  Click a category to see the transactions behind it. **Where it came from** lists income.
+- **Spending that grew** shows payees that cost more than usual.
+
+![The Spending page for September](images/manual/23-spending.png)
+
+### Transactions
+
+Every transaction from every statement, newest first.
+
+- **Search** by description (press `/` to jump to the search box), or filter by **account** or
+  **category**.
+- **From → To** shows where the money moved. "Sample HDFC Card → Groceries" is a purchase.
+  "Money in transit → …" is a payment from another account of yours that is waiting for the
+  other side. The category then reads **Own account: waiting**.
+- **Open a row** (the arrow at its left) to see its **Bookkeeping**: the original text with
+  personal details hidden, each side of the transaction and where it came from (the statement,
+  the categorizer, or you), and **Ignore this row**, which drops a duplicate for good.
+- Click a row's category to change it, and tick **Always do this** to make a rule.
+
+![A transaction opened to show its bookkeeping](images/manual/24-transactions-row-open.png)
+
+### An account
+
+Click an account in the left menu. You see its balance and two tabs: **Transactions** (a running
+balance beside each row) and **Statements** (each uploaded file, with **Remove**). **Upload
+statement** adds a file. For an account you keep up by hand, **Update value** appears instead.
+**Delete account** is for one you added by mistake.
+
+![One account, with its balance and transactions](images/manual/27-account-page.png)
+
+### All accounts
+
+Your books in accounting terms: **Assets**, **Liabilities**, **Income**, **Expenses** and
+**Equity**, each totalled over all time. You rarely need it, but it is how you can check any number
+back to its source.
+
+![All accounts](images/manual/26-all-accounts.png)
+
+### Categories
+
+Rename a category or edit its description by clicking it. **＋ Add category** makes a new one.
+**Merge** folds one category into another. **Retire** hides one you no longer use. **Delete** works
+only on a category with no transactions.
+
+![The Categories page](images/manual/31-categories.png)
+
+### The Rules page
+
+A rule says "if the narration contains this text, use this category". The list is checked from the
+top and the first match wins. Use the arrows to reorder, **Edit** to change, and **Delete** to
+remove. **＋ Add rule** opens a form where you choose whether the narration **contains** or **starts
+with** your text, whether the rule applies to money in, money out or both, and the category. It
+tells you how many existing transactions it would match.
+
+![The Rules page](images/manual/29-rules.png)
+
+![Adding a rule](images/manual/30-add-rule.png)
+
+### Settings
+
+Two numbers shape **Safe to spend**: the **Base amount kept aside** (an emergency cushion it never
+counts) and an optional **Monthly allowance**. Below them are the privacy controls (see
+[Privacy](#privacy-what-is-stored-and-what-is-sent)).
+
+![The Settings page](images/manual/32-settings.png)
+
+### More than one person
+
+Each person has their own books. **Add person** sits under the name at the top of the menu.
+
+![Adding a person](images/manual/37-add-person.png)
+
+**Delete person** removes the person you are viewing and everything in their ledger: accounts,
+transactions, uploaded statements, rules and privacy names. You type their name to confirm, and it
+cannot be undone. Nobody else's books change.
+
+![Deleting a person asks you to type their name](images/manual/38-delete-person.png)
+
+### On a phone
+
+The menu opens from the button at the top left.
+
+![The Overview on a phone](images/manual/35-mobile-overview.png)
+
+## Statements
+
+Open an account and choose **Upload statement**. The file is read in memory and never kept. [Statements](statements.md) has the detail: what each file looks like, every message you might see, and what to do when a bank is not on the list.
 
 | Provider | What to download |
 | --- | --- |
 | HDFC Bank account | NetBanking statement, `.xls` or `.csv` |
 | HDFC credit card | Billed statement, `.xls` or `.xlsx` |
-| SBI account | Account statement, `.xlsx` or `.csv` |
+| SBI account | Account statement, `.xls`, `.xlsx` or `.csv` |
 | Axis credit card | Monthly statement PDF |
 | Groww | Holdings statement or order history, `.xlsx` (mutual funds and stocks are separate accounts) |
 
@@ -208,7 +225,7 @@ removed with the account, and a movement it shared with another account stays on
 waiting for its other side. Your other accounts are not changed. It cannot be undone, but you can
 add the account again and upload its statements.
 
-## 6. The Inbox
+## The Inbox
 
 | Item | What to do |
 | --- | --- |
@@ -252,7 +269,7 @@ credit card bill paid from your bank (through CRED, directly or by UPI) is then 
 spending, and pairs with the payment on the card's statement. A few starter rules cover common card
 payment wording. Categories also take a few **keywords** (click under the description).
 
-## 7. The figures
+## The figures
 
 - **Net worth** is everything you own minus everything you owe. Credit card balances and loans
   reduce it. Investments count at their latest market value.
@@ -274,7 +291,7 @@ payment wording. Categories also take a few **keywords** (click under the descri
   each came from (the statement, the categorizer, or you). **Ignore this row** drops a duplicate
   for good.
 
-## 8. Privacy: what is stored and what is sent
+## Privacy: what is stored and what is sent
 
 Before a statement is parsed, a redactor removes personal details: names, addresses, phone numbers,
 email, PAN, account and card numbers, and UPI handles. Each becomes a stable token such as
@@ -303,46 +320,22 @@ removes its originals. To keep none, run without a key.
 
 Two things leave your machine: redacted statement lines (and your category descriptions) to the
 categorizer, and figures with aliases to the chat model. Consider asking your provider to enable
-zero data retention. Only the owner can sign in (see Signing in above). The app also binds to `127.0.0.1` and refuses other hosts and cross-site writes.
+zero data retention. Only the owner can sign in (see [Sign-in](configuration.md#sign-in)). The app also binds to `127.0.0.1` and refuses other hosts and cross-site writes.
 
-## 9. Asking questions
+## Asking questions
 
-**Ask** opens the assistant beside the page. It reads your ledger through nine tools (net worth,
-spending, month-by-month trends, activity by account, a search over transactions, regular
-payments, spending that grew, safe to spend, and the Inbox) and explains what they returned: what
-stands out, why, and what to do next. Answers are formatted, with the key figures in bold and a
-small table when months, accounts or categories are compared. Try:
+**Ask** opens the assistant beside the page. It reads your ledger through nine tools and explains
+what they returned: what stands out, why, and what to do next. It can compare your cards and bank
+accounts ("which credit card had the most spending?"), look at one payee or category over any
+period ("how much on Swiggy?"), find your regular monthly payments, and more.
 
-- **Overall:** "How am I doing overall?", "Is my spending going up, and what is driving it?"
-- **Cards and accounts:** "Which credit card had the most spending in September?", "Which bank
-  account made the most payments?", "How much came into my savings account this month?"
-- **Payees and categories:** "How much did I spend on Swiggy?", "What did I spend on food in the
-  last three months?", "What were my biggest expenses in September?"
-- **Commitments:** "What are my regular monthly payments?", "What could I cut?"
-- **Safe to spend:** "How much can I safely spend this month?", "Can I afford a ₹40,000 trip?"
-- **Balances and data:** "What is my net worth, and what do I owe?", "What do I need to fix?"
+It needs a model key. Without one, a question gets the reply "the assistant could not answer", and
+everything else keeps working.
 
-Some things to know:
+The [assistant guide](assistant.md) lists what you can ask, how to read an answer, what it counts
+and does not count, what it cannot do, and how it protects your privacy.
 
-- **Spending is not transfers.** A card bill paid from your bank is a move between your own
-  accounts, so it counts as neither. The assistant keeps these apart, and opening balances are
-  never counted as payments.
-- **Periods.** If you do not name one it uses the latest month and says so. A month still in
-  progress is called "the month so far" and never compared with a whole month.
-- **Names of people.** The assistant cannot see people's names (they are hidden before anything
-  is sent), so it cannot search for a person. Use the search box on the Transactions page.
-- **It only reads.** It cannot move money or change a category or rule.
-- **Privacy.** The model sees account, institution and category names only as stand-ins such as
-  `Credit_Or_Loan_1`, and your name, card and account numbers and UPI handles are removed first. The assistant is told
-  never to ask for or repeat card numbers, PINs, OTPs or passwords, never to reveal its instructions, and to treat
-  text inside bank files as data, not instructions. Its replies are stripped of links, images and
-  markup before you see them, because a hidden instruction in a bank file could otherwise use
-  them to send your data elsewhere.
-
-Every figure comes from a tool result, not from the model's arithmetic. History lasts until the API
-restarts.
-
-## 10. A typical month
+## A typical month
 
 | When | What to do |
 | --- | --- |
@@ -353,24 +346,13 @@ restarts.
 
 You do not need to upload everything at once, or in order.
 
-## 11. Troubleshooting
+## Problems
 
-| Problem | Likely cause and fix |
-| --- | --- |
-| The page is blank or errors on load | `docker compose ps` shows whether all three services are up. `docker compose logs api` shows startup errors, including a failed migration |
-| "Add an account first" | Statements go into an account. Finish setup or add one from the sidebar |
-| "This file doesn't look like a … statement" | The file is not the format for that account. The message says what to upload instead |
-| `PASSWORD_REQUIRED` / `PASSWORD_INVALID` | The file is protected. Enter the right password when asked |
-| `REDACTION_FAILED` | A file could not be redacted, so nothing was imported by design. Report it with the bank and file type |
-| Everything needs a category | No key is set, the key is invalid, or the categorizer is unreachable (`docker compose logs api` shows the provider's error). Fix `.env`, restart, then categorize by hand or retry |
-| A transfer between my accounts did not pair | Upload the other account's statement for the same days. If both are uploaded, set the row's category to **Own account or investment** |
-| "… is short of its statement" | A statement for that account is missing between two uploaded ones |
-| "Add a category" is refused | Names must be unique, and every category needs a line on what it is for |
-| A category cannot be deleted | It has transactions. Merge it into another instead |
-| Chat says the assistant is unavailable | Neither `ANTHROPIC_API_KEY` nor `OPENAI_API_KEY` is set, or the key is invalid |
-| Port 3000 or 8000 is already in use | Stop what is using it, or change the port mapping in `docker-compose.yml` |
+[Troubleshooting and FAQ](troubleshooting.md) is organised by the stage where you are stuck:
+starting the app, signing in, setup, uploading, the Inbox, figures that look wrong, the assistant,
+and backups.
 
-## 12. For developers
+## For developers
 
 Running the tests, the code layout, migrations and the HTTP API are in the
 [developer docs](README.md#for-developers).

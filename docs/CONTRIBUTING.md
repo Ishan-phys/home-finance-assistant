@@ -68,7 +68,11 @@ cd .. && make e2e                    # browser tests on a separate throwaway sta
 - Keep a pull request to one idea. Add or update tests: behaviour without a test will not be merged.
 - Schema changes need an Alembic migration in `packages/cfo-ledger/alembic/versions/` and a row
   in [database-migrations.md](database-migrations.md).
-- Update the user guide and the page's "About this page" note. If the change alters the packages
+- Update the user guide and the page's "About this page" note. Keep the other guides true too:
+  [statements](statements.md) when a bank format or an upload message changes,
+  [the assistant](assistant.md) when its tools or rules change, and
+  [configuration](configuration.md) when a setting is added. `tools/test_docs.py` fails when a
+  link breaks or the app's own words that a guide quotes change. If the change alters the packages
   or the rules they follow, update [architecture.md](architecture.md) too.
 - Write commit messages that say why, in the imperative ("Add Axis debit card adapter").
 
