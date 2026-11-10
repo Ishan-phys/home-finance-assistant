@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Markdown } from "@/components/common/markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { personPath } from "@/lib/api";
@@ -12,10 +13,14 @@ interface Message {
 }
 
 const SUGGESTIONS = [
+  "How am I doing overall?",
+  "Is my spending going up, and what is driving it?",
   "How much can I safely spend this month?",
   "Where did my money leak this month?",
-  "What is my net worth, and what do I owe?",
 ];
+
+/** "get_safe_to_spend" as words, for the small tags that show what the assistant looked at. */
+const toolLabel = (name: string) => name.replace(/^get_/, "").replace(/_/g, " ");
 
 /** The assistant's conversation. Figures come from tools over the ledger, never the model. */
 export function ChatPanel() {
@@ -57,7 +62,7 @@ export function ChatPanel() {
           const event = JSON.parse(frame.slice(6));
           if (event.type === "session") session.current = event.session_id;
           else if (event.type === "tool") patch((l) => ({ ...l, tools: [...(l.tools ?? []), event.name] }));
-          else if (event.type === "text") patch((l) => ({ ...l, text: l.text ? `${l.text}\n${event.text}` : event.text }));
+          else if (event.type === "text") patch((l) => ({ ...l, text: l.text ? `${l.text}\n\n${event.text}` : event.text }));
           else if (event.type === "error") patch((l) => ({ ...l, text: event.message }));
         }
       }
@@ -70,7 +75,7 @@ export function ChatPanel() {
 
   return (
     <div aria-label="Chat" className="flex h-full min-h-0 flex-col gap-3">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1" data-testid="chat-log">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1" data-testid="chat-log" aria-live="polite">
           {messages.length === 0 ? (
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Figures come from the ledger, not from the model.</p>
@@ -86,20 +91,41 @@ export function ChatPanel() {
               ))}
             </div>
           ) : null}
-          {messages.map((m, i) => (
-            <div key={i} className={m.role === "user" ? "ml-8 rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground" : "mr-4 space-y-1"}>
-              {m.role === "assistant" && m.tools?.length ? (
-                <div className="flex flex-wrap gap-1">
-                  {m.tools.map((t, j) => (
-                    <span key={j} className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                      checked {t.replace(/_/g, " ")}
-                    </span>
-                  ))}
+          {messages.map((m, i) =>
+            m.role === "user" ? (
+              <div key={i} className="ml-10 rounded-2xl rounded-br-md bg-primary px-3.5 py-2 text-sm text-primary-foreground">
+                <span className="sr-only">You: </span>
+                {m.text}
+              </div>
+            ) : (
+              <div key={i} className="mr-2 space-y-1.5">
+                {m.tools?.length ? (
+                  <div className="flex flex-wrap gap-1">
+                    {m.tools.map((t, j) => (
+                      <span key={j} className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-medium text-accent-foreground">
+                        checked {toolLabel(t)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="rounded-2xl rounded-bl-md border bg-card px-3.5 py-2.5 shadow-sm">
+                  <span className="sr-only">Assistant: </span>
+                  {m.text ? (
+                    <Markdown>{m.text}</Markdown>
+                  ) : busy && i === messages.length - 1 ? (
+                    <p className="flex items-center gap-1 text-sm text-muted-foreground" role="status">
+                      Thinking
+                      <span aria-hidden className="inline-flex gap-0.5">
+                        <span className="size-1 animate-bounce rounded-full bg-current [animation-delay:-0.3s]" />
+                        <span className="size-1 animate-bounce rounded-full bg-current [animation-delay:-0.15s]" />
+                        <span className="size-1 animate-bounce rounded-full bg-current" />
+                      </span>
+                    </p>
+                  ) : null}
                 </div>
-              ) : null}
-              <p className="whitespace-pre-wrap text-sm">{m.text || (m.role === "assistant" && busy ? "Thinking…" : "")}</p>
-            </div>
-          ))}
+              </div>
+            ),
+          )}
           <div ref={bottom} />
         </div>
         <form

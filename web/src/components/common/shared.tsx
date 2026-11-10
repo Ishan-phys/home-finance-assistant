@@ -117,22 +117,28 @@ function subscribeGuides(onChange: () => void) {
   };
 }
 
-/** A collapsible note that says what a page is for. It starts open and stays closed once the
- * reader closes it; the choice lives in localStorage, read before the first paint. */
+/** A collapsible note that says what a page is for. It starts open (or closed, with
+ * `startOpen={false}`, where space is tight) and then keeps whatever the reader chose; the choice
+ * lives in localStorage, read before the first paint. */
 export function PageGuide({
   about,
   title = "About this page",
   className,
+  startOpen = true,
 }: {
   about: PageAbout;
   title?: string;
   className?: string;
+  startOpen?: boolean;
 }) {
   const key = `cfo-guide:${about.id}`;
   const closed = useSyncExternalStore(
     subscribeGuides,
-    () => window.localStorage.getItem(key) === "closed",
-    () => false,
+    () => {
+      const chosen = window.localStorage.getItem(key);
+      return chosen === null ? !startOpen : chosen === "closed";
+    },
+    () => !startOpen,
   );
   return (
     <details open={!closed} className={cn("rounded-xl border border-accent-foreground/15 bg-accent/60 px-3.5 py-2.5 text-sm", className)}>

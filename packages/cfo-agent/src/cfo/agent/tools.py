@@ -1,4 +1,4 @@
-"""The agent's five tools: thin wrappers over the report layer (spec 4.6, design §5.12).
+"""The agent's six tools: thin wrappers over the report layer (spec 4.6, design §5.12).
 
 Each returns amounts as integer paise plus a preformatted Indian-grouped string, so the model
 quotes figures and never computes them. Account paths are removed from what the model sees:
@@ -77,6 +77,22 @@ def build_tools(
         """
         return read(lambda d: reports.leaks_report(d, month))
 
+    def get_trend(months: int = 6) -> Json:
+        """How money moved over the last several months: for each month, money in, money out,
+        saved and the savings rate, how spending changed against the month before, the average of
+        the complete months, and which categories drove the latest month (each with its share of
+        spending and its change against the month before). A month still in progress is marked
+        not complete.
+
+        Call this for "how am I doing", trends, savings rate, whether spending is rising, what
+        changed, or any question that needs a comparison between months. Pair it with
+        get_spending or get_leaks to explain a change.
+
+        Args:
+            months: How many months back to look, from 2 to 12. Defaults to 6.
+        """
+        return read(lambda d: reports.trend_report(d, months))
+
     def get_safe_to_spend() -> Json:
         """How much can be spent now: cash and savings, minus the base amount the owner keeps
         aside and what is owed on credit cards, capped by the monthly allowance if one is set.
@@ -95,4 +111,4 @@ def build_tools(
         """
         return read(reports.inbox_report)
 
-    return [get_net_worth, get_spending, get_leaks, get_safe_to_spend, get_inbox]
+    return [get_net_worth, get_spending, get_trend, get_leaks, get_safe_to_spend, get_inbox]
