@@ -47,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
-      <div className="hidden w-64 shrink-0 border-r bg-sidebar md:block">
+      <div className="hidden w-72 shrink-0 border-r bg-sidebar md:block">
         <div className="sticky top-0 h-screen">
           <Sidebar onAsk={() => setAsking(true)} />
         </div>

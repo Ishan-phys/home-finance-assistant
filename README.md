@@ -144,6 +144,12 @@ Contributions are welcome, especially bank adapters and redaction improvements. 
 [CONTRIBUTING.md](docs/CONTRIBUTING.md) first. **Never commit real statements or personal data.**
 AI coding agents should start with [AGENTS.md](AGENTS.md).
 
+## Third-party marks
+
+The small logos beside accounts (HDFC Bank, SBI, Axis Bank and Groww) are in
+`web/public/institutions/`. They are trademarks of their owners and appear only to show which bank
+or provider an account is with. See `web/src/lib/institutions.ts` to add another.
+
 ## License
 
 [MIT](LICENSE) © Ishan Srivastava

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InstitutionIcon } from "@/components/common/institution-icon";
 import { ErrorNote, NativeSelect } from "@/components/common/shared";
 import { api, toPaise, type Account, type AccountType, type Catalog } from "@/lib/api";
 import { useAction } from "@/lib/use-api";
@@ -64,13 +65,16 @@ export function AccountForm({ catalog, onAdded }: { catalog: Catalog; onAdded: (
       </div>
       <div className="space-y-1">
         <Label htmlFor="account-institution">Bank or provider</Label>
-        <NativeSelect id="account-institution" className="w-full" value={institution} onChange={(e) => setInstitution(e.target.value)}>
-          {catalog.institutions.map((i) => (
-            <option key={i.name} value={i.name}>
-              {i.name === OTHER ? "Something else" : i.name}
-            </option>
-          ))}
-        </NativeSelect>
+        <div className="flex items-center gap-2">
+          <InstitutionIcon institution={institution === OTHER ? otherName : institution} type={type} size="md" />
+          <NativeSelect id="account-institution" className="min-w-0 flex-1" value={institution} onChange={(e) => setInstitution(e.target.value)}>
+            {catalog.institutions.map((i) => (
+              <option key={i.name} value={i.name}>
+                {i.name === OTHER ? "Something else" : i.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
       </div>
       {institution === OTHER ? (
         <div className="space-y-1 sm:col-span-2">
