@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { api, setCurrentPerson, type Person, type SetupState } from "@/lib/api";
+import { api, setCurrentPerson, type Account, type BalanceSheet, type Person, type SetupState } from "@/lib/api";
+import { useApi } from "@/lib/use-api";
 
 const STORAGE_KEY = "cfo.person";
 
@@ -17,6 +18,10 @@ interface PersonState {
   refresh: () => void;
   select: (id: string) => void;
   reloadPeople: (select?: string) => Promise<void>;
+  /** The current person's balance sheet, shared so the menu and every icon read one copy. */
+  sheet: BalanceSheet | null;
+  /** The current person's real accounts by id, for a page that knows only an account's id. */
+  accountById: (id: string | null | undefined) => Account | undefined;
 }
 
 const Ctx = createContext<PersonState | null>(null);
@@ -48,6 +53,12 @@ export function PersonProvider({ children }: { children: ReactNode }) {
   const [setupFor, setSetupFor] = useState<Loaded<SetupState> | null>(null);
   const [version, setVersion] = useState(0);
   const setupKey = `${current}#${version}`;
+  const sheet = useApi<BalanceSheet>(current ? "/reports/balance-sheet" : null, version).data;
+  const accounts = useMemo(() => {
+    const byId = new Map<string, Account>();
+    for (const g of sheet?.groups ?? []) for (const a of g.accounts) if (a.role === "real") byId.set(a.id, a);
+    return byId;
+  }, [sheet]);
 
   const choose = useCallback((list: Person[], wanted: string | null) => {
     const chosen = list.find((p) => p.id === wanted) ?? list[0] ?? null;
@@ -101,8 +112,10 @@ export function PersonProvider({ children }: { children: ReactNode }) {
         setVersion((v) => v + 1);
       },
       reloadPeople,
+      sheet,
+      accountById: (id) => (id ? accounts.get(id) : undefined),
     }),
-    [people, current, setup, setupFor, setupKey, version, reloadPeople],
+    [people, current, setup, setupFor, setupKey, version, reloadPeople, sheet, accounts],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

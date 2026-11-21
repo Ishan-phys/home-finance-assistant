@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { CategoryList } from "@/components/categories/category-list";
+import { InstitutionIcon } from "@/components/common/institution-icon";
 import { Amount, ErrorNote, Loading } from "@/components/common/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -79,9 +80,12 @@ export function SetupWizard() {
             <ul aria-label="Accounts added" className="divide-y rounded-xl border">
               {accounts.map((a) => (
                 <li key={a.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                  <span>
-                    <span className="font-medium">{a.name}</span>
-                    <span className="text-muted-foreground"> · {a.type_label} · {a.institution}</span>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <InstitutionIcon institution={a.institution} type={a.type} size="md" />
+                    <span className="min-w-0">
+                      <span className="font-medium">{a.name}</span>
+                      <span className="text-muted-foreground"> · {a.type_label} · {a.institution}</span>
+                    </span>
                   </span>
                   {a.manual || !a.binding ? a.balance ? <Amount value={a.balance} /> : null : (
                     <span className="text-xs text-muted-foreground">statements</span>

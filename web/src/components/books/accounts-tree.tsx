@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { InstitutionIcon } from "@/components/common/institution-icon";
 import { Amount, ErrorNote, Loading, PageHeader } from "@/components/common/shared";
 import { Button } from "@/components/ui/button";
 import type { AccountsTree, TreeNode } from "@/lib/api";
+import { brandFor } from "@/lib/institutions";
 import { usePerson } from "@/lib/person";
 import { useApi } from "@/lib/use-api";
 
 function Nodes({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
+  const { accountById } = usePerson();
   return (
     <ul>
       {nodes.map((n) => (
@@ -16,6 +19,17 @@ function Nodes({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
             <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 rounded px-2 py-1 text-sm hover:bg-muted/50" style={{ paddingLeft: `${0.5 + depth * 1}rem` }}>
               <span>
                 {n.children.length ? <span className="mr-1 inline-block text-muted-foreground group-open:rotate-90">›</span> : <span className="mr-1 inline-block w-2" />}
+                {accountById(n.account_id) ? (
+                  <InstitutionIcon
+                    institution={accountById(n.account_id)?.institution}
+                    type={accountById(n.account_id)?.type}
+                    size="xs"
+                    className="mr-1.5 align-middle"
+                  />
+                ) : !n.account_id && brandFor(n.name) ? (
+                  // A group named after a bank, such as "HDFC Bank", holds that bank's accounts.
+                  <InstitutionIcon institution={n.name} size="xs" className="mr-1.5 align-middle" />
+                ) : null}
                 {n.account_id ? n.name : n.name.replace(/-/g, " ")}
                 <span className="ml-2 font-mono text-[11px] text-muted-foreground">{n.path}</span>
               </span>

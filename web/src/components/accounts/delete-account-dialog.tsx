@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { InstitutionIcon } from "@/components/common/institution-icon";
 import { ErrorNote } from "@/components/common/shared";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { api, errorText } from "@/lib/api";
+import { api, errorText, type AccountType } from "@/lib/api";
 import { usePerson } from "@/lib/person";
 
 interface Usage {
@@ -20,6 +21,7 @@ export function DeleteAccountDialog({ open, onOpenChange, ...account }: {
   accountId: string;
   accountName: string;
   institution: string | null;
+  type?: AccountType | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -31,10 +33,11 @@ export function DeleteAccountDialog({ open, onOpenChange, ...account }: {
 }
 
 // Mounted only while the dialog is open, so each opening starts from a clean state and asks again.
-function DeleteBody({ accountId, accountName, institution, onClose }: {
+function DeleteBody({ accountId, accountName, institution, type, onClose }: {
   accountId: string;
   accountName: string;
   institution: string | null;
+  type?: AccountType | null;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -62,7 +65,8 @@ function DeleteBody({ accountId, accountName, institution, onClose }: {
         <DialogTitle>Delete {accountName}?</DialogTitle>
       </DialogHeader>
       <div className="space-y-2 text-sm text-muted-foreground">
-        <p>
+        <p className="flex items-center gap-2">
+          <InstitutionIcon institution={institution} type={type} size="sm" />
           <span className="font-medium text-foreground">{label}</span>
         </p>
         {usage ? (

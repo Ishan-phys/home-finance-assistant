@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { InstitutionIcon } from "@/components/common/institution-icon";
 import { Amount, EmptyState, ErrorNote, Loading, shortDate } from "@/components/common/shared";
 import { CategoryPicker } from "@/components/transactions/category-picker";
 import { PayCardButton } from "@/components/transactions/card-payment";
@@ -9,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { api, type InboxItem } from "@/lib/api";
 import { usePerson } from "@/lib/person";
 import { useAction, useApi } from "@/lib/use-api";
+
+/** The badge of the account an item is about, so the owner sees at a glance which bank it is. */
+function AccountBadge({ id }: { id: string }) {
+  const { accountById } = usePerson();
+  const account = accountById(id);
+  return account ? <InstitutionIcon institution={account.institution} type={account.type} size="md" /> : null;
+}
 
 /** One list of everything that needs the owner, each with its fix next to it. */
 export function InboxList({ limit }: { limit?: number }) {
@@ -45,6 +53,7 @@ export function InboxList({ limit }: { limit?: number }) {
     <ul aria-label="Inbox" className="divide-y rounded-xl border">
       {shown.map((item, i) => (
         <li key={`${item.kind}-${item.transaction_id ?? item.account?.id}-${i}`} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+          {item.account ? <AccountBadge id={item.account.id} /> : null}
           <div className="min-w-0 flex-1">
             <p className="text-sm">{item.text}</p>
             {item.original ? <p className="break-all font-mono text-xs text-muted-foreground">{item.original}</p> : null}

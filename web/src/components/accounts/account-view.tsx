@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { InstitutionIcon } from "@/components/common/institution-icon";
 import { Amount, EmptyState, ErrorNote, Loading, PageHeader, shortDate, Stat } from "@/components/common/shared";
 import { TxnTable } from "@/components/transactions/txn-table";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,7 @@ export function AccountView({ id }: { id: string }) {
     <div>
       <PageHeader
         title={account.name}
+        icon={<InstitutionIcon institution={account.institution} type={account.type} size="lg" />}
         subtitle={[account.type_label, account.institution].filter(Boolean).join(" · ")}
         about={{
           id: "account",
@@ -170,6 +172,7 @@ export function AccountView({ id }: { id: string }) {
         accountId={account.id}
         accountName={account.name}
         institution={account.institution}
+        type={account.type}
         open={deleting}
         onOpenChange={setDeleting}
       />

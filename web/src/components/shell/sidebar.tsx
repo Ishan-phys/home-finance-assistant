@@ -4,8 +4,9 @@ import { ArrowLeftRight, BookOpen, Inbox, LayoutDashboard, ListFilter, LogOut, P
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
+import { InstitutionIcon } from "@/components/common/institution-icon";
 import { Amount } from "@/components/common/shared";
-import type { BalanceSheet, InboxItem } from "@/lib/api";
+import type { InboxItem } from "@/lib/api";
 import { usePerson } from "@/lib/person";
 import { useApi } from "@/lib/use-api";
 import { cn } from "@/lib/utils";
@@ -50,8 +51,7 @@ function NavLink({
 }
 
 export function Sidebar({ onAsk }: { onAsk: () => void }) {
-  const { version, people, person, select, reloadPeople } = usePerson();
-  const sheet = useApi<BalanceSheet>("/reports/balance-sheet", version);
+  const { version, people, person, select, reloadPeople, sheet } = usePerson();
   const inbox = useApi<InboxItem[]>("/inbox", version);
   const path = usePathname();
   const router = useRouter();
@@ -93,7 +93,7 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
             <Plus className="size-4" />
           </Link>
         </div>
-        {(sheet.data?.groups ?? [])
+        {(sheet?.groups ?? [])
           .filter((g) => g.accounts.some((a) => a.role === "real"))
           .map((g) => (
             <div key={g.group}>
@@ -110,12 +110,15 @@ export function Sidebar({ onAsk }: { onAsk: () => void }) {
                         href={`/accounts/${a.id}`}
                         aria-current={path === `/accounts/${a.id}` ? "page" : undefined}
                         className={cn(
-                          "flex items-baseline justify-between gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted",
+                          "flex items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors hover:bg-muted",
                           path === `/accounts/${a.id}` && "bg-accent font-medium text-accent-foreground",
                         )}
                       >
-                        <span className="truncate">{a.name}</span>
-                        {a.balance ? <Amount value={a.balance} className="text-xs text-muted-foreground" /> : null}
+                        <span className="flex min-w-0 items-center gap-2">
+                          <InstitutionIcon institution={a.institution} type={a.type} size="xs" />
+                          <span className="truncate">{a.name}</span>
+                        </span>
+                        {a.balance ? <Amount value={a.balance} className="shrink-0 whitespace-nowrap text-xs text-muted-foreground" /> : null}
                       </Link>
                     </li>
                   ))}

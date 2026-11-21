@@ -4,7 +4,8 @@ import { ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
 import { Fragment, useState } from "react";
 import { Amount, shortDate } from "@/components/common/shared";
 import { Button } from "@/components/ui/button";
-import { api, type Txn } from "@/lib/api";
+import { InstitutionIcon } from "@/components/common/institution-icon";
+import { api, type Side, type Txn } from "@/lib/api";
 import { usePerson } from "@/lib/person";
 import { useAction } from "@/lib/use-api";
 import { CategoryPicker } from "./category-picker";
@@ -15,6 +16,19 @@ const ORIGIN: Record<string, string> = {
   owner: "set by you",
   system: "opening balance",
 };
+
+/** One end of a movement: the account's name, with its bank's badge when it is one of the
+ * owner's real accounts (a category has none). */
+function Place({ side }: { side: Side }) {
+  const { accountById } = usePerson();
+  const account = accountById(side.id);
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {account ? <InstitutionIcon institution={account.institution} type={account.type} size="xs" /> : null}
+      {side.name}
+    </span>
+  );
+}
 
 /** Transactions as "From → To". A row opens to show its bookkeeping: every posting, which
  * account it touched and by how much, and where each side came from. */
@@ -66,9 +80,9 @@ export function TxnTable({ rows, running = false }: { rows: Txn[]; running?: boo
                   </td>
                   <td className="px-2 py-2">
                     <div className="flex flex-wrap items-center gap-1">
-                      <span>{t.from.name}</span>
+                      <Place side={t.from} />
                       <ArrowRight className="size-3.5 text-muted-foreground" aria-label="to" />
-                      <span>{t.to.name}</span>
+                      <Place side={t.to} />
                     </div>
                   </td>
                   <td className="px-2 py-1.5">
