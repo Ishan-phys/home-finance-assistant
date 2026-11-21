@@ -14,10 +14,10 @@ import { brandFor } from "@/lib/institutions";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
-  xs: { box: "size-5 rounded-md", glyph: "size-3", mark: "text-[9px]", markLong: "text-[6px]" },
-  sm: { box: "size-6 rounded-md", glyph: "size-3.5", mark: "text-[11px]", markLong: "text-[7px]" },
-  md: { box: "size-8 rounded-lg", glyph: "size-4", mark: "text-sm", markLong: "text-[10px]" },
-  lg: { box: "size-11 rounded-xl", glyph: "size-5", mark: "text-xl", markLong: "text-sm" },
+  xs: { box: "size-5 rounded-md", glyph: "size-3" },
+  sm: { box: "size-6 rounded-md", glyph: "size-3.5" },
+  md: { box: "size-8 rounded-lg", glyph: "size-4" },
+  lg: { box: "size-11 rounded-xl", glyph: "size-5" },
 } as const;
 
 // What an account of this type looks like when its institution has no badge of its own.
@@ -35,11 +35,10 @@ const GLYPHS: Record<AccountType, LucideIcon> = {
   gold: Coins,
 };
 
-/** A small badge for the bank or provider behind an account: the bank's mark for the ones the app
- * knows (HDFC Bank, SBI, Axis Bank, Groww; a monogram where there is no logo file yet), otherwise an
- * icon for the kind of account. It is decoration only: the account's name always sits beside it, so
- * it is hidden from screen readers. A monogram is drawn by CSS, so it is not part of the page's
- * text. */
+/** A small badge for the bank or provider behind an account: its logo for the ones the app knows
+ * (HDFC Bank, SBI, Axis Bank, Groww), otherwise an icon for the kind of account. It is decoration
+ * only: the account's name always sits beside it, so it is hidden from screen readers and carries
+ * no alt text. The logo sits on a white tile in both light and dark themes. */
 export function InstitutionIcon({
   institution,
   type,
@@ -53,45 +52,17 @@ export function InstitutionIcon({
 }) {
   const s = SIZES[size];
   const brand = brandFor(institution);
-  if (brand?.glyph || brand?.image) {
-    return (
-      <span
-        aria-hidden
-        data-testid="institution-icon"
-        data-institution={brand.key}
-        data-logo={brand.glyph ? "mark" : "image"}
-        style={{ backgroundColor: brand.glyph ? brand.colour : "#ffffff" }}
-        className={cn("inline-flex shrink-0 items-center justify-center", brand.image && "ring-1 ring-border", s.box, className)}
-      >
-        {brand.glyph ? (
-          <svg viewBox="0 0 24 24" className="size-[62%] fill-white">
-            <path d={brand.glyph} />
-          </svg>
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element -- a tiny static logo, no optimisation needed
-          <img src={brand.image} alt="" className="size-[72%] object-contain" />
-        )}
-      </span>
-    );
-  }
   if (brand) {
-    const mark = size === "xs" || size === "sm" ? brand.short : brand.mark;
     return (
       <span
         aria-hidden
-        data-mark={mark}
         data-testid="institution-icon"
         data-institution={brand.key}
-        data-logo="monogram"
-        style={{ backgroundColor: brand.colour }}
-        className={cn(
-          "inline-flex shrink-0 select-none items-center justify-center font-semibold leading-none tracking-tight text-white",
-          "before:content-[attr(data-mark)]",
-          s.box,
-          mark.length > 1 ? s.markLong : s.mark,
-          className,
-        )}
-      />
+        className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden bg-white ring-1 ring-border", s.box, className)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element -- a tiny static logo, no optimisation needed */}
+        <img src={brand.image} alt="" className="size-full object-contain" />
+      </span>
     );
   }
   const Glyph = (type && GLYPHS[type]) || Landmark;

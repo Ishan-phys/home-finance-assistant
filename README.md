@@ -146,9 +146,9 @@ AI coding agents should start with [AGENTS.md](AGENTS.md).
 
 ## Third-party marks
 
-The small bank badges in the app use the HDFC Bank and Axis Bank marks from
-[Simple Icons](https://simpleicons.org) (CC0). The marks are trademarks of their owners and appear
-only to show which bank an account is with. See `web/src/lib/institutions.ts`.
+The small logos beside accounts (HDFC Bank, SBI, Axis Bank and Groww) are in
+`web/public/institutions/`. They are trademarks of their owners and appear only to show which bank
+or provider an account is with. See `web/src/lib/institutions.ts` to add another.
 
 ## License
 

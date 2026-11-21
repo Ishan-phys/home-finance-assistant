@@ -3,7 +3,7 @@ import { completeSetup, createAccount, createPerson, resetDatabase } from "./hel
 
 test.beforeEach(() => resetDatabase());
 
-test("each account shows the mark of its bank or provider, and an icon for any other", async ({ page, request }) => {
+test("each account shows the logo of its bank or provider, and an icon for any other", async ({ page, request }) => {
   const person = await createPerson(request);
   const hdfc = await createAccount(request, person, { name: "HDFC Savings", type: "savings", institution: "HDFC Bank" });
   await createAccount(request, person, { name: "SBI Savings", type: "savings", institution: "SBI" });
@@ -16,21 +16,20 @@ test("each account shows the mark of its bank or provider, and an icon for any o
   const nav = page.getByRole("navigation", { name: "Main" });
   const row = (name: string) => nav.getByRole("link", { name: new RegExp(name) }).getByTestId("institution-icon");
   await expect(row("HDFC Savings")).toHaveAttribute("data-institution", "hdfc");
-  await expect(row("HDFC Savings")).toHaveAttribute("data-logo", "mark"); // the bank's own mark
   await expect(row("SBI Savings")).toHaveAttribute("data-institution", "sbi");
-  await expect(row("SBI Savings")).toHaveAttribute("data-logo", "monogram"); // until a logo file is added
   await expect(row("Axis Flipkart")).toHaveAttribute("data-institution", "axis");
-  await expect(row("Axis Flipkart")).toHaveAttribute("data-logo", "mark");
   await expect(row("Groww Funds")).toHaveAttribute("data-institution", "groww");
-  await expect(row("Groww Funds")).toHaveAttribute("data-logo", "monogram");
   await expect(row("Co-op FD")).toHaveAttribute("data-institution", "other"); // an icon for its kind
 
-  // The badge is decoration: it never changes an account's name for a screen reader, and a mark
-  // adds no text to the page.
+  // The badge is decoration: it never changes an account's name for a screen reader.
   await expect(nav.getByRole("link", { name: /^HDFC Savings/ })).toBeVisible();
 
   // The account's own page carries it beside the title.
   await page.goto(`/accounts/${hdfc}`);
   await expect(page.getByRole("heading", { name: "HDFC Savings" })).toBeVisible();
-  await expect(page.getByRole("main").getByTestId("institution-icon").first()).toHaveAttribute("data-institution", "hdfc");
+  const logo = page.getByRole("main").getByTestId("institution-icon").first();
+  await expect(logo).toHaveAttribute("data-institution", "hdfc");
+  // The real file loads: a broken image would have no width.
+  await expect(logo.locator("img")).toHaveJSProperty("complete", true);
+  expect(await logo.locator("img").evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
 });
