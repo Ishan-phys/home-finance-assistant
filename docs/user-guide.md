@@ -68,11 +68,11 @@ The sidebar is always on the left:
 | **Ask** | Opens the assistant on the right, beside the page |
 
 **Bank badges.** Each account shows a small badge for its bank or provider, so you can tell your
-HDFC card from your SBI savings at a glance: a coloured letter for HDFC Bank (H), SBI (S), Axis
-Bank (A) and Groww (G), and a plain icon for the kind of account (a card, a piggy bank, a chart)
-for any other bank. You see them in the left menu, on the account's page, in the Inbox, beside
-accounts in the Transactions list, in the **All accounts** tree, and in setup. They are only a
-visual aid: the account's name is always shown beside the badge.
+HDFC card from your SBI savings at a glance. HDFC Bank and Axis Bank show their own mark. SBI and
+Groww show a coloured letter (S and G) for now, and any other bank shows a plain icon for the kind
+of account (a card, a piggy bank, a chart). You see them in the left menu, on the account's page,
+in the Inbox, beside accounts in the Transactions list, in the **All accounts** tree, and in setup.
+They are only a visual aid: the account's name is always shown beside the badge.
 
 On a phone the sidebar opens from the menu button at the top.
 

@@ -144,6 +144,12 @@ Contributions are welcome, especially bank adapters and redaction improvements. 
 [CONTRIBUTING.md](docs/CONTRIBUTING.md) first. **Never commit real statements or personal data.**
 AI coding agents should start with [AGENTS.md](AGENTS.md).
 
+## Third-party marks
+
+The small bank badges in the app use the HDFC Bank and Axis Bank marks from
+[Simple Icons](https://simpleicons.org) (CC0). The marks are trademarks of their owners and appear
+only to show which bank an account is with. See `web/src/lib/institutions.ts`.
+
 ## License
 
 [MIT](LICENSE) © Ishan Srivastava

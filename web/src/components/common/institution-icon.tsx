@@ -35,10 +35,11 @@ const GLYPHS: Record<AccountType, LucideIcon> = {
   gold: Coins,
 };
 
-/** A small badge for the bank or provider behind an account: a coloured monogram for the ones the
- * app knows (HDFC Bank, SBI, Axis Bank, Groww), otherwise an icon for the kind of account. It is
- * decoration only: the account's name always sits beside it, so it is hidden from screen readers.
- * The monogram is drawn by CSS, so it is not part of the page's text. */
+/** A small badge for the bank or provider behind an account: the bank's mark for the ones the app
+ * knows (HDFC Bank, SBI, Axis Bank, Groww; a monogram where there is no logo file yet), otherwise an
+ * icon for the kind of account. It is decoration only: the account's name always sits beside it, so
+ * it is hidden from screen readers. A monogram is drawn by CSS, so it is not part of the page's
+ * text. */
 export function InstitutionIcon({
   institution,
   type,
@@ -52,6 +53,27 @@ export function InstitutionIcon({
 }) {
   const s = SIZES[size];
   const brand = brandFor(institution);
+  if (brand?.glyph || brand?.image) {
+    return (
+      <span
+        aria-hidden
+        data-testid="institution-icon"
+        data-institution={brand.key}
+        data-logo={brand.glyph ? "mark" : "image"}
+        style={{ backgroundColor: brand.glyph ? brand.colour : "#ffffff" }}
+        className={cn("inline-flex shrink-0 items-center justify-center", brand.image && "ring-1 ring-border", s.box, className)}
+      >
+        {brand.glyph ? (
+          <svg viewBox="0 0 24 24" className="size-[62%] fill-white">
+            <path d={brand.glyph} />
+          </svg>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- a tiny static logo, no optimisation needed
+          <img src={brand.image} alt="" className="size-[72%] object-contain" />
+        )}
+      </span>
+    );
+  }
   if (brand) {
     const mark = size === "xs" || size === "sm" ? brand.short : brand.mark;
     return (
@@ -60,6 +82,7 @@ export function InstitutionIcon({
         data-mark={mark}
         data-testid="institution-icon"
         data-institution={brand.key}
+        data-logo="monogram"
         style={{ backgroundColor: brand.colour }}
         className={cn(
           "inline-flex shrink-0 select-none items-center justify-center font-semibold leading-none tracking-tight text-white",
